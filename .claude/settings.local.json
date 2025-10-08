@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:blanxer.com)",
+      "WebSearch",
+      "Bash(curl:*)",
+      "Bash(dig:*)",
+      "Bash(nslookup:*)",
+      "Bash(whois:*)",
+      "Bash(openssl s_client:*)",
+      "Bash(openssl:*)",
+      "Bash(time curl:*)",
+      "Bash(/dev/null)",
+      "Bash(for endpoint in /ping /version /v1 /graphql /api/auth /api/users /api/config)",
+      "Bash(do echo \"=== $endpoint ===\")",
+      "Bash(done)",
+      "Bash(traceroute:*)",
+      "Bash(pnpm init:*)",
+      "Read(//Users/raunakbohra/Desktop/**)",
+      "Bash(find:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

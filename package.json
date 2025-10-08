@@ -1,0 +1,30 @@
+{
+  "name": "iwishbag-shopify",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant e-commerce platform for Nepal",
+  "workspaces": [
+    "frontend",
+    "api",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter frontend dev\" \"pnpm --filter api dev\"",
+    "build": "pnpm --filter frontend build && pnpm --filter api build",
+    "deploy": "pnpm --filter frontend deploy && pnpm --filter api deploy",
+    "prisma:migrate": "pnpm --filter api prisma:migrate",
+    "prisma:generate": "pnpm --filter api prisma:generate",
+    "prisma:studio": "pnpm --filter api prisma:studio",
+    "lint": "pnpm --filter frontend lint && pnpm --filter api lint",
+    "type-check": "pnpm --filter frontend type-check && pnpm --filter api type-check"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
