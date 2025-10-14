@@ -4,6 +4,8 @@ import { HTTPException } from 'hono/http-exception'
 import { logToBetterStack } from './lib/logging'
 import type { AppEnv } from './types'
 import authRoutes from './routes/auth'
+import tenantRoutes from './routes/tenant'
+import staffRoutes from './routes/staff'
 
 const app = new Hono<AppEnv>()
 
@@ -60,5 +62,7 @@ app.get('/health', (c) =>
 )
 
 app.route('/v1/auth', authRoutes)
+app.route('/v1/tenants', tenantRoutes)
+app.route('/v1/staff', staffRoutes)
 
 export default app

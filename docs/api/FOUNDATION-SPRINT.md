@@ -13,10 +13,10 @@
 - [ ] Issue JWTs (jose) with tenant + role claims; log auth events via `logToBetterStack`.
 
 ## 2. Tenant & User Management
-- [ ] Create `/v1/tenants` and `/v1/staff` routes with invite flow (signed token + KV storage).
-- [ ] Seed `owner`, `staff`, `platform_admin` roles using Prisma migrations.
-- [ ] Expose `/v1/tenants/current/stats` for plan usage (products/orders/staff counts).
-- [ ] Enforce plan limits (respond 429 when exceeded).
+- [x] `/v1/tenants/current` + PATCH update + stats endpoint.
+- [x] Staff CRUD (`GET/POST/PATCH/DELETE /v1/staff`) with plan limit enforcement and soft delete.
+- [x] Default roles seeded per tenant and attached to staff.
+- [ ] Extend invite acceptance flow + email delivery (TODO).
 
 ## 3. Admin Shell
 - [ ] Stand up placeholder `apps/admin` page protected by Cloudflare Access.

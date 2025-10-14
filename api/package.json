@@ -11,7 +11,8 @@
     "lint": "eslint src --ext .ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "test": "vitest"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.2.1",
@@ -25,8 +26,10 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240925.0",
     "@types/bcryptjs": "^2.4.2",
+    "@types/node": "^20.16.6",
     "prisma": "^5.19.1",
     "typescript": "^5.6.3",
+    "vitest": "^1.6.0",
     "wrangler": "^3.80.1"
   }
 }
