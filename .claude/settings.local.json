@@ -17,7 +17,14 @@
       "Bash(traceroute:*)",
       "Bash(pnpm init:*)",
       "Read(//Users/raunakbohra/Desktop/**)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(pkill:*)",
+      "Bash(npm run dev)",
+      "Bash(pnpm install)",
+      "Bash(pnpm --filter api dev)",
+      "Bash(pnpm --filter frontend dev)"
     ],
     "deny": [],
     "ask": []
