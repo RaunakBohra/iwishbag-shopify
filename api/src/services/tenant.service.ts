@@ -3,10 +3,10 @@ import { PlanTier } from '@prisma/client'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 
-const PLAN_LIMITS: Record<PlanTier, { staff: number }> = {
-  FREE: { staff: 1 },
-  PRO: { staff: 5 },
-  MAX: { staff: 20 }
+const PLAN_LIMITS: Record<PlanTier, { staff: number; products: number }> = {
+  FREE: { staff: 1, products: 25 },
+  PRO: { staff: 5, products: 200 },
+  MAX: { staff: 20, products: 1000 }
 }
 
 function requireTenantId(authUser: AuthUser) {

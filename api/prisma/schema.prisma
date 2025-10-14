@@ -27,6 +27,12 @@ enum InvitationStatus {
   REVOKED
 }
 
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -37,6 +43,7 @@ model Tenant {
   subscription TenantSubscription?
   usage     TenantUsage?
   invitees  Invite[]
+  products  Product[]
   users     User[]
   roles     Role[]
   auditLogs AuditLog[]
@@ -127,6 +134,49 @@ model Invite {
   acceptedAt  DateTime?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  title       String
+  description String?
+  sku         String?
+  price       Decimal        @db.Decimal(10, 2)
+  inventory   Int            @default(0)
+  status      ProductStatus  @default(DRAFT)
+  variants    ProductVariant[]
+  images      ProductImage[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  @@index([tenantId])
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  name       String
+  sku        String?
+  price      Decimal? @db.Decimal(10, 2)
+  inventory  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model ProductImage {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  url        String
+  alt        String?
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
 }
 
 model TenantSubscription {

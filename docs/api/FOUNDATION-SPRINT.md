@@ -24,6 +24,12 @@
 - [x] Add PostHog events (TODO when analytics wiring begins).
 - [x] Unit tests for auth utilities, roles middleware, invites (`npm run --workspace iwishbag-store-api test`).
 
+## 5. Catalog & Inventory (Sprint 3)
+- [x] Product schema, migrations, and Prisma client refresh.
+- [x] Product CRUD endpoints (`/v1/products`) with plan limit enforcement.
+- [x] Catalog service unit tests.
+- [ ] Variant/asset management & marketplace integrations (future).
+
 ---
 
 *Next milestone:* complete above, then move to catalog + onboarding flows (Sprints 3–4).

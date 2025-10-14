@@ -9,6 +9,7 @@ import staffRoutes from './routes/staff'
 import inviteRoutes from './routes/invite'
 import publicInviteRoutes from './routes/public-invite'
 import adminRoutes from './routes/admin'
+import productRoutes from './routes/products'
 
 const app = new Hono<AppEnv>()
 
@@ -70,5 +71,6 @@ app.route('/v1/staff', staffRoutes)
 app.route('/v1/invites', inviteRoutes)
 app.route('/public/invites', publicInviteRoutes)
 app.route('/v1/admin', adminRoutes)
+app.route('/v1/products', productRoutes)
 
 export default app
