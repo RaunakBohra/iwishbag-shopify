@@ -142,7 +142,7 @@ This document defines the REST surface for the Nepal E-Commerce Platform and bre
 
 ### Background Jobs
 - **Inventory Snapshot Refresh:** catalog worker already recomputes on change; nightly cron (Workers Scheduled event) re-syncs to guard against drift.
-- **Alert Sweep:** same cron checks thresholds and schedules notifications using queue `inventory-alerts` (future work).
+- **Alert Sweep:** scheduled Worker runs every 15 minutes. For each tenant/product where `available <= lowStockThreshold` and `lastAlertAt > 24h`, enqueue `inventory-alerts` message, send email/webhook, and update `lastAlertAt`.
 
 ### Implementation Tasks
 - [ ] Implement transactional adjustment writer (wrap in Neon transaction).
