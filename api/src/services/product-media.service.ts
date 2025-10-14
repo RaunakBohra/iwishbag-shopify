@@ -3,6 +3,7 @@ import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { slugify } from '../utils/slugify'
 import { getPlanLimits } from './tenant.service'
+import { applyUsageDelta } from './usage.service'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -147,12 +148,7 @@ export async function addImage(env: EnvBindings, authUser: AuthUser, productId: 
         }
       })
 
-      await tx.tenantUsage.update({
-        where: { tenantId },
-        data: {
-          images: { increment: 1 }
-        }
-      })
+      await applyUsageDelta(tx, tenantId, { images: 1 })
 
       return created
     })
@@ -196,13 +192,7 @@ export async function deleteImage(env: EnvBindings, authUser: AuthUser, productI
 
     await tx.productImage.delete({ where: { id: imageId } })
 
-    const usage = await tx.tenantUsage.findUnique({ where: { tenantId }, select: { images: true } })
-    if (usage && usage.images > 0) {
-      await tx.tenantUsage.update({
-        where: { tenantId },
-        data: { images: { decrement: 1 } }
-      })
-    }
+    await applyUsageDelta(tx, tenantId, { images: -1 })
 
     return { objectKey: existing.objectKey }
   })

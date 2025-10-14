@@ -3,6 +3,7 @@ import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { getPlanLimits } from './tenant.service'
 import { Prisma } from '@prisma/client'
+import { applyUsageDelta } from './usage.service'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -94,14 +95,7 @@ export async function createProduct(env: EnvBindings, authUser: AuthUser, payloa
       }
     })
 
-    await tx.tenantUsage.update({
-      where: { tenantId },
-      data: {
-        products: {
-          increment: 1
-        }
-      }
-    })
+    await applyUsageDelta(tx, tenantId, { products: 1 })
 
     return created
   })
@@ -177,24 +171,13 @@ export async function deleteProduct(env: EnvBindings, authUser: AuthUser, produc
       }
     })
 
-    const usageUpdate: Prisma.TenantUsageUpdateInput = {
-      products: { decrement: 1 }
-    }
-
     const variantsCount = product.variants.length
     const imagesCount = product.images.length
 
-    if (variantsCount > 0) {
-      usageUpdate.variants = { decrement: variantsCount }
-    }
-
-    if (imagesCount > 0) {
-      usageUpdate.images = { decrement: imagesCount }
-    }
-
-    await tx.tenantUsage.update({
-      where: { tenantId },
-      data: usageUpdate
+    await applyUsageDelta(tx, tenantId, {
+      products: -1,
+      variants: variantsCount ? -variantsCount : undefined,
+      images: imagesCount ? -imagesCount : undefined
     })
   })
 

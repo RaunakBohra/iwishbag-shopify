@@ -78,13 +78,19 @@ describe('variant service', () => {
   })
 
   it('creates variant and option values', async () => {
+    mockPrisma.tenantUsage.findUnique.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      variants: 0,
+      images: 0
+    })
+
     const variant = await createVariant(env, authUser, 'prod-1', { name: 'Blue', optionValues: [{ optionId: 'opt-1', value: 'Blue' }] })
     expect(variant.name).toBe('Red')
     expect(mockPrisma.productOptionValue.createMany).toHaveBeenCalled()
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
-        data: { variants: { increment: 1 } }
+        data: { variants: 1 }
       })
     )
   })

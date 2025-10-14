@@ -2,6 +2,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { getPlanLimits } from './tenant.service'
+import { applyUsageDelta } from './usage.service'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -97,12 +98,7 @@ export async function createVariant(env: EnvBindings, authUser: AuthUser, produc
       })
     }
 
-    await tx.tenantUsage.update({
-      where: { tenantId },
-      data: {
-        variants: { increment: 1 }
-      }
-    })
+    await applyUsageDelta(tx, tenantId, { variants: 1 })
 
     return variant
   })
@@ -152,15 +148,7 @@ export async function deleteVariant(env: EnvBindings, authUser: AuthUser, produc
     await tx.productOptionValue.deleteMany({ where: { variantId } })
     await tx.productVariant.delete({ where: { id: variantId } })
 
-    const usage = await tx.tenantUsage.findUnique({ where: { tenantId } })
-    if (usage && usage.variants > 0) {
-      await tx.tenantUsage.update({
-        where: { tenantId },
-        data: {
-          variants: { decrement: 1 }
-        }
-      })
-    }
+    await applyUsageDelta(tx, tenantId, { variants: -1 })
   })
 
   return { success: true }

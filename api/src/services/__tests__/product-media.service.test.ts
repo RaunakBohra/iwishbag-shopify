@@ -129,7 +129,7 @@ describe('product media service', () => {
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
-        data: { images: { increment: 1 } }
+        data: { images: 1 }
       })
     )
   })
@@ -148,7 +148,7 @@ describe('product media service', () => {
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
-        data: { images: { decrement: 1 } }
+        data: { images: 0 }
       })
     )
   })

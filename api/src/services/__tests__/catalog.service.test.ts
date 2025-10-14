@@ -20,6 +20,7 @@ const mockPrisma = {
     findUnique: vi.fn()
   },
   tenantUsage: {
+    findUnique: vi.fn(),
     update: vi.fn()
   },
   $transaction: vi.fn()
@@ -97,6 +98,12 @@ beforeEach(() => {
   })
 
   mockPrisma.product.update.mockResolvedValue({ success: true })
+  mockPrisma.tenantUsage.findUnique.mockResolvedValue({
+    tenantId: 'tenant-1',
+    products: 0,
+    variants: 0,
+    images: 0
+  })
   mockPrisma.tenantUsage.update.mockResolvedValue({})
 })
 
@@ -109,24 +116,37 @@ describe('catalog service', () => {
   })
 
   it('creates product and increments usage', async () => {
+    mockPrisma.tenantUsage.findUnique.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      products: 0,
+      variants: 0,
+      images: 0
+    })
+
     const product = await createProduct(env, authUser, { title: 'Example', price: 10 })
     expect(product.title).toBe('Example')
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { tenantId: 'tenant-1' }
+        where: { tenantId: 'tenant-1' },
+        data: { products: 1 }
       })
     )
   })
 
   it('soft deletes product and decrements usage', async () => {
+    mockPrisma.tenantUsage.findUnique.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      products: 1,
+      variants: 0,
+      images: 0
+    })
+
     const result = await deleteProduct(env, authUser, 'prod-1')
     expect(result.success).toBe(true)
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
-        data: {
-          products: { decrement: 1 }
-        }
+        data: { products: 0 }
       })
     )
   })
@@ -147,15 +167,22 @@ describe('catalog service', () => {
       updatedAt: new Date()
     })
 
+    mockPrisma.tenantUsage.findUnique.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      products: 1,
+      variants: 2,
+      images: 1
+    })
+
     await deleteProduct(env, authUser, 'prod-1')
 
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
         data: {
-          products: { decrement: 1 },
-          variants: { decrement: 2 },
-          images: { decrement: 1 }
+          products: 0,
+          variants: 0,
+          images: 0
         }
       })
     )
