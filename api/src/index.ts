@@ -10,6 +10,11 @@ import inviteRoutes from './routes/invite'
 import publicInviteRoutes from './routes/public-invite'
 import adminRoutes from './routes/admin'
 import productRoutes from './routes/products'
+import productVariantRoutes from './routes/product-variants'
+import productOptionRoutes from './routes/product-options'
+import productMediaRoutes from './routes/product-media'
+import productTagRoutes from './routes/product-tags'
+import productCollectionRoutes from './routes/product-collections'
 
 const app = new Hono<AppEnv>()
 
@@ -72,5 +77,10 @@ app.route('/v1/invites', inviteRoutes)
 app.route('/public/invites', publicInviteRoutes)
 app.route('/v1/admin', adminRoutes)
 app.route('/v1/products', productRoutes)
+app.route('/v1/product-variants', productVariantRoutes)
+app.route('/v1/product-options', productOptionRoutes)
+app.route('/v1/product-media', productMediaRoutes)
+app.route('/v1/product-tags', productTagRoutes)
+app.route('/v1/product-collections', productCollectionRoutes)
 
 export default app
