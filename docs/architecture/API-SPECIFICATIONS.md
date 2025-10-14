@@ -101,6 +101,48 @@ This document defines the REST surface for the Nepal E-Commerce Platform and bre
 - `POST /v1/inventory/adjustments`
 - `GET /v1/inventory/adjustments`
 - `POST /v1/inventory/transfers`
+- `POST /v1/inventory/alerts/test`
+
+### Contracts
+- **`POST /v1/inventory/adjustments`**
+  - Purpose: Apply additive inventory delta for a product/variant pair.
+  - Request schema:
+    ```jsonc
+    {
+      "productId": "prod_123",
+      "variantId": "var_987",        // optional; when omitted adjust base product stock
+      "quantity": -2,                 // positive = restock, negative = decrement
+      "reason": "ORDER_FULFILLED",   // enum: MANUAL, SHIPMENT_RECEIVED, ORDER_FULFILLED, DAMAGE, OTHER
+      "memo": "Order #1001"
+    }
+    ```
+  - Behaviour:
+    - Runs in a transaction that locks target variant/product row (`FOR UPDATE`).
+    - Rejects adjustments pushing inventory below zero unless tenant flag `allowBackorders` is true.
+    - Persists row in `inventory_adjustments` with actor + metadata and updates `TenantUsage` counters where applicable.
+    - Emits `inventory.updated` webhook and enqueues catalog event for storefront cache purge.
+  - Response: `{ "data": { "inventory": { "available": 18, "reserved": 0 }, "adjustment": { ... } } }`
+
+- **`GET /v1/inventory/levels`**
+  - Returns paginated inventory snapshot by product/variant.
+  - Accepts filters `productId`, `sku`, `status`, `inStock`.
+  - Includes `available`, `reserved`, `incoming`, `updatedAt` fields.
+  - Backed by materialized `product_inventory` table kept in sync by catalog worker.
+
+- **`GET /v1/inventory/adjustments`**
+  - Paginates historical adjustments; supports filters by `productId`, `variantId`, `reason`, `createdBy`.
+
+- **`POST /v1/inventory/alerts/test`**
+  - Allows merchants to trigger a sample low-stock alert webhook/email to validate configuration.
+
+### Alerting Strategy
+- Low-stock threshold stored per product (`lowStockThreshold` default 5). Worker recomputes nightly and on adjustments; when available inventory ≤ threshold and previously above threshold, enqueue alert notification and mark timestamp.
+- Notifications delivered via: email (Postmark), dashboard notification, optional webhook (`inventory.low_stock`).
+- Deduplicate by product/variant per 24h window.
+
+### Background Jobs
+- **Inventory Snapshot Refresh:** catalog worker already recomputes on change; nightly cron (Workers Scheduled event) re-syncs to guard against drift.
+- **Alert Sweep:** same cron checks thresholds and schedules notifications using queue `inventory-alerts` (future work).
 
 ### Implementation Tasks
 - [ ] Implement transactional adjustment writer (wrap in Neon transaction).
