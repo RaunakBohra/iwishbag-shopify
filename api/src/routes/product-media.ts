@@ -3,14 +3,17 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import type { AppEnv } from '../types'
 import { requireAuth, requireRole } from '../middleware/auth'
-import { listImages, addImage, updateImage, deleteImage } from '../services/product-media.service'
+import { listImages, addImage, updateImage, deleteImage, reorderImages } from '../services/product-media.service'
 
 const media = new Hono<AppEnv>()
 
-const imageSchema = z.object({
-  url: z.string().url(),
+const updateImageSchema = z.object({
   alt: z.string().optional(),
   position: z.number().int().nonnegative().optional()
+})
+
+const reorderSchema = z.object({
+  imageIds: z.array(z.string().min(1)).min(1)
 })
 
 media.use('*', requireAuth)
@@ -21,14 +24,27 @@ media.get('/:productId', async (c) => {
   return c.json({ data: images })
 })
 
-media.post('/:productId', requireRole(['OWNER', 'PLATFORM_ADMIN']), zValidator('json', imageSchema), async (c) => {
+media.post('/:productId', requireRole(['OWNER', 'PLATFORM_ADMIN']), async (c) => {
   const authUser = c.var.authUser!
-  const payload = c.req.valid('json')
-  const image = await addImage(c.env, authUser, c.req.param('productId'), payload)
+
+  const form = await c.req.formData()
+  const file = form.get('file')
+
+  if (!(file instanceof File)) {
+    return c.json({ error: { message: 'Image file is required' } }, 400)
+  }
+
+  const alt = form.get('alt')
+
+  const image = await addImage(c.env, authUser, c.req.param('productId'), {
+    file,
+    alt: typeof alt === 'string' ? alt : undefined
+  })
+
   return c.json({ data: image }, 201)
 })
 
-media.patch('/:productId/:imageId', requireRole(['OWNER', 'PLATFORM_ADMIN']), zValidator('json', imageSchema.partial()), async (c) => {
+media.patch('/:productId/:imageId', requireRole(['OWNER', 'PLATFORM_ADMIN']), zValidator('json', updateImageSchema), async (c) => {
   const authUser = c.var.authUser!
   const payload = c.req.valid('json')
   const image = await updateImage(c.env, authUser, c.req.param('productId'), c.req.param('imageId'), payload)
@@ -38,6 +54,13 @@ media.patch('/:productId/:imageId', requireRole(['OWNER', 'PLATFORM_ADMIN']), zV
 media.delete('/:productId/:imageId', requireRole(['OWNER', 'PLATFORM_ADMIN']), async (c) => {
   const authUser = c.var.authUser!
   const result = await deleteImage(c.env, authUser, c.req.param('productId'), c.req.param('imageId'))
+  return c.json({ data: result })
+})
+
+media.post('/:productId/reorder', requireRole(['OWNER', 'PLATFORM_ADMIN']), zValidator('json', reorderSchema), async (c) => {
+  const authUser = c.var.authUser!
+  const payload = c.req.valid('json')
+  const result = await reorderImages(c.env, authUser, c.req.param('productId'), payload.imageIds)
   return c.json({ data: result })
 })
 

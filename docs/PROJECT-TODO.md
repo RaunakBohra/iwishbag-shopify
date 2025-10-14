@@ -85,7 +85,7 @@
 
 ## 10. Catalog & Storefront (Sprints 3–4)
 - [ ] Extend catalog schema (variants, collections, tags) and update migrations.
-- [ ] Implement product media storage via R2 + image ordering.
+- [x] Implement product media storage via R2 + image ordering.
 - [ ] Build merchant catalog UI (list + detail editor) with PostHog instrumentation.
 - [ ] Expose storefront product APIs and initial customer-facing pages.
 - [ ] Wire inventory adjustments, low-stock alerts, and usage counters.

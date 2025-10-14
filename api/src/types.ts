@@ -4,6 +4,7 @@ export interface EnvBindings {
   PRODUCT_MEDIA_BUCKET: R2Bucket
   PROOF_OF_DELIVERY_BUCKET: R2Bucket
   BACKUPS_BUCKET: R2Bucket
+  PRODUCT_MEDIA_PUBLIC_BASE_URL?: string
   DATABASE_URL: string
   POSTHOG_HOST?: string
   POSTHOG_API_KEY?: string

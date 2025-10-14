@@ -193,6 +193,9 @@ model ProductImage {
   url        String
   alt        String?
   position   Int      @default(0)
+  objectKey  String?
+  contentType String?
+  fileSize   Int?
   createdAt  DateTime @default(now())
 }
 
