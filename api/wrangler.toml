@@ -1,0 +1,16 @@
+name = "iwishbag-store-api"
+main = "src/index.ts"
+compatibility_date = "2025-10-14"
+compatibility_flags = ["nodejs_compat"]
+tsconfig = "./tsconfig.json"
+
+kv_namespaces = [
+  { binding = "SESSIONS", id = "8699ef99d1e14bfba4ce5bf8327e2f4e" },
+  { binding = "RATE_LIMIT", id = "0a6f1312e49d4fa6a85b525f513ce527" }
+]
+
+r2_buckets = [
+  { binding = "PRODUCT_MEDIA_BUCKET", bucket_name = "nepshop-product-media" },
+  { binding = "PROOF_OF_DELIVERY_BUCKET", bucket_name = "nepshop-proof-of-delivery" },
+  { binding = "BACKUPS_BUCKET", bucket_name = "nepshop-backups" }
+]

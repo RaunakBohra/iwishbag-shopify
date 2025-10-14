@@ -22,10 +22,10 @@
 
 1. **Workers + KV + Queues**
    ```bash
-   wrangler init nepshop-api --type=javascript
+   wrangler init iwishbag-api --type=javascript
    wrangler kv namespace create SESSIONS
    wrangler kv namespace create RATE_LIMIT
-   wrangler d1 create nepshop-cache # optional cache layer
+   wrangler d1 create iwishbag-cache # optional cache layer
    ```
    - [ ] Record namespace IDs in `docs/secrets/cloudflare.md`.
    - [ ] Add to `wrangler.toml` in `apps/api`.
@@ -55,37 +55,29 @@
    - [ ] Link GitHub repo, set build command (`pnpm build` with path filters).
    - [ ] Configure production → `main`, preview → all branches.
    - ✅ Projects provisioned with production branch `main`:
-     • `nepshop-web`  
-     • `nepshop-merchant`  
-     • `nepshop-storefront`
+     • `iwishbag-web`  
+     • `iwishbag-merchant`  
+     • `iwishbag-storefront`
 
 5. **Zero Trust / Access**
-   - [ ] Configure Cloudflare Access application for `internal-admin.nepshop.com`.
-   - [ ] Restrict via Google Workspace emails.
-   - [ ] Add CNAMEs (`@`, `www`, `api`, `merchant`, `*.nepshop.store`) in Cloudflare DNS pointing to Pages/Workers endpoints.
-   - [ ] Enable “Always Use HTTPS” and “Full (strict)” SSL; set cache rules per integration guide.
+   - ✅ Access application configured for `internal-admin.iwishbag.store`; Google Workspace allow-list applied.
+   - ✅ DNS records (`@`, `www`, `merchant`, `api`, wildcard storefront) added in Cloudflare with proxy + HTTPS enforcement.
 
 ---
 
 ## 3. Neon PostgreSQL
 
 1. **Project & Branches**
-   ```bash
-   neonctl projects create nepshop-prod
-   neonctl branches create staging --project nepshop-prod
-   neonctl branches create dev --project nepshop-prod
-   ```
+   - ✅ Project `iwishbag.store` with branches `main`, `staging`, `dev` created (via Neon dashboard).
 2. **Connection Strings**
-   - [ ] Retrieve direct + pooled URLs per branch.
-   - [ ] Store in 1Password/secret manager.
+   - ✅ Direct + pooled URLs stored in 1Password (`Neon Prod/Staging/Dev` entries).
 
 3. **Roles & Extensions**
    - [ ] Run SQL from `docs/database/NEON-MULTI-TENANT.md` to create roles, enable RLS, set default privileges.
    - [ ] Install extensions: `pgcrypto`, `uuid-ossp`, `pg_stat_statements`.
 
 4. **Monitoring**
-   - [ ] Enable PITR.
-   - [ ] Schedule branch snapshots via Neon console (nightly).
+   - ✅ PITR enabled; nightly snapshots scheduled in Neon.
 
 ---
 
@@ -94,11 +86,12 @@
 - **MeiliSearch**
   - [ ] Deploy managed instance (Fly.io/DigitalOcean) or self-host; note `MEILI_HOST`, `MEILI_MASTER_KEY`.
 - **PostHog**
-  - [ ] Create project, obtain API key + host URL.
+  - ✅ Project created; client host/key added to `frontend/.env.local`.
+  - ✅ Server env template seeded (`api/.dev.vars`); awaiting secure PostHog API key entry.
 - **Better Stack**
-  - [ ] Setup logs + uptime monitors, obtain API token.
+  - ✅ Tokens stored; log helper at `api/src/lib/logging.ts`; monitors provisioned via script.
 - **AWS SES**
-  - [ ] Verify domains (`nepshop.com`, `nepshop.store`), move to production mode, create SMTP credentials.
+  - ✅ Domain `iwishbag.store` verified; SMTP credentials stored in vault.
 - **Sparrow SMS**
   - [ ] Register sender IDs, fetch API token.
 - **DNSimple**
@@ -107,11 +100,7 @@
   - [ ] Create service + escalation policy for Sev1 incidents.
 
 - **AWS SQS (replacing Cloudflare Queues)**
-  - [ ] Create queues: `nepshop-jobs`, `nepshop-webhooks`, plus dead-letter queues (DLQ) for each.
-  - [ ] Configure redrive policy (e.g., 5 retries before DLQ).
-  - [ ] Create IAM user `nepshop-worker` with policy restricting access to these queues.
-  - [ ] Generate access key/secret; store in secret manager.
-  - [ ] Document queue URLs and region (suggest `ap-south-1` for Nepal proximity).
+  - ✅ Queues + DLQs created with redrive policies; IAM user `iwishbag-store-worker` provisioned; access keys stored in vault.
 
 Document all credential locations in `docs/secrets/README.md` (do not store actual secrets in repo).
 

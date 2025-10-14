@@ -1,0 +1,32 @@
+{
+  "name": "iwishbag-store-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.2.1",
+    "@prisma/client": "^5.19.1",
+    "@prisma/extension-accelerate": "^1.2.1",
+    "bcryptjs": "^2.4.3",
+    "hono": "^4.4.7",
+    "jose": "^5.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240925.0",
+    "@types/bcryptjs": "^2.4.2",
+    "prisma": "^5.19.1",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.80.1"
+  }
+}

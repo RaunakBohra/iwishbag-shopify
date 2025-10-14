@@ -4,8 +4,8 @@
 ---
 
 ## 1. Platform Provisioning & Access
-- [done ] Cloudflare account: Workers, Pages, KV, R2, Durable Objects, Queues, Cron → create projects, grant access, store API token.
-- [done ] Neon Postgres: create production + staging branches, configure pooling, invite collaborators.
+- [x] Cloudflare account: Workers, Pages, KV, R2, Durable Objects, Access, DNS → projects created, policies applied, API token stored securely.
+- [x] Neon Postgres: create production + staging branches, configure pooling, invite collaborators.
 - [ ] Supporting services: MeiliSearch, PostHog, Better Stack, AWS SES, Sparrow SMS, DNSimple, PagerDuty.
 - [ ] Secrets management: load all service keys into Cloudflare Secrets + GitHub Actions; document rotation policy.
 - [ ] Bootstrap GitHub org permissions, branch protection, required reviews, Codecov integration.
@@ -41,11 +41,13 @@
 - [ ] Marketing tools UI (emails, SMS, campaigns, discounts, loyalty).
 
 ## 5. Integrations & Infrastructure
-- [ ] Execute Cloudflare services setup playbook (`docs/integrations/CLOUDFLARE-SERVICES.md`).
+- [x] Execute Cloudflare services setup playbook (`docs/integrations/CLOUDFLARE-SERVICES.md`).
 - [ ] Implement Nepal payment/logistics/SMS integrations (`docs/integrations/NEPAL-SERVICES.md`).
-- [ ] Configure SES domains + templates; Sparrow SMS sender IDs.
-- [ ] Domain management via Cloudflare DNS: Pages projects, wildcard storefront subdomains, SSL automation.
-- [ ] Provision AWS SQS queues (jobs, webhooks) + DLQs; create IAM user with scoped policy; store credentials in secrets.
+- [x] Configure SES domains + templates; Sparrow SMS sender IDs (SES verified & credentials stored).
+- [x] Domain management via Cloudflare DNS: Pages projects, wildcard storefront subdomains, SSL automation.
+- [x] Provision AWS SQS queues (jobs, webhooks) + DLQs; create IAM user with scoped policy; store credentials in secrets.
+- [x] Stand up PostHog analytics (keys configured, env files seeded, instrumentation ready).
+- [x] Configure Better Stack logging & uptime alerts (log helper added, monitors created).
 
 ## 6. DevOps & CI/CD (ref `docs/deployment/DEPLOYMENT-CICD.md`)
 - [ ] Implement GitHub Actions workflows (ci.yml, deploy-web.yml, deploy-api.yml, db-migrate.yml, release.yml).

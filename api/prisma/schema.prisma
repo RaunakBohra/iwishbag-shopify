@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  MAX
+}
+
+enum UserRole {
+  OWNER
+  STAFF
+  PLATFORM_ADMIN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      PlanTier @default(FREE)
+  planStatus String  @default("trial")
+  trialEndsAt DateTime?
+  subscription TenantSubscription?
+  usage     TenantUsage?
+  invitees  Invite[]
+  users     User[]
+  roles     Role[]
+  auditLogs AuditLog[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String    @id @default(cuid())
+  tenantId     String?
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id])
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole
+  avatarUrl    String?
+  locale       String?   @default("en")
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
+  invite       Invite?   @relation("invitee")
+  inviteId     String?   @unique
+  invitedUsers Invite[]  @relation("inviter")
+  roleAssignments UserRoleAssignment[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  name      String
+  description String?
+  isDefault Boolean @default(false)
+  users         UserRoleAssignment[]
+  permissions   RolePermission[]
+  invites       Invite[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RolePermission {
+  id           String      @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         Role        @relation(fields: [roleId], references: [id])
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+}
+
+model UserRoleAssignment {
+  id      String @id @default(cuid())
+  userId  String
+  roleId  String
+  user    User  @relation(fields: [userId], references: [id])
+  role    Role  @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+}
+
+model Invite {
+  id          String            @id @default(cuid())
+  tenantId    String
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  email       String
+  inviterId   String
+  inviter     User              @relation("inviter", fields: [inviterId], references: [id])
+  roleId      String
+  role        Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  inviteeId   String?   @unique
+  invitee     User?             @relation("invitee", fields: [inviteeId], references: [id])
+  status      InvitationStatus  @default(PENDING)
+  token       String            @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model TenantSubscription {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  plan        PlanTier
+  status      String   @default("active")
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd Boolean @default(false)
+  externalId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TenantUsage {
+  id           String  @id @default(cuid())
+  tenantId     String  @unique
+  tenant       Tenant  @relation(fields: [tenantId], references: [id])
+  products     Int     @default(0)
+  staff        Int     @default(0)
+  orders       Int     @default(0)
+  lastResetAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  metadata  Json
+  createdAt DateTime @default(now())
+}

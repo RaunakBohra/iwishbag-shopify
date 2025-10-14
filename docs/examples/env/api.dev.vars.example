@@ -1,0 +1,18 @@
+# PostHog server-side key (store in Cloudflare secret)
+POSTHOG_API_KEY=<insert_posthog_server_key>
+POSTHOG_HOST=https://us.i.posthog.com
+
+# Better Stack log ingestion
+BETTERSTACK_LOGS_TOKEN=<insert_betterstack_logs_token>
+BETTERSTACK_LOGS_ENDPOINT=https://in.logs.betterstack.com
+
+# AWS SQS
+AWS_SQS_REGION=ap-south-1
+AWS_SQS_JOBS_URL=https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-jobs
+AWS_SQS_WEBHOOKS_URL=https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-webhooks
+AWS_SQS_DLQ_JOBS_URL=https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-jobs-dlq
+AWS_SQS_DLQ_WEBHOOKS_URL=https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-webhooks-dlq
+
+# AWS credentials should be injected via secret manager (do not commit)
+# AWS_SQS_ACCESS_KEY_ID=
+# AWS_SQS_SECRET_ACCESS_KEY=
