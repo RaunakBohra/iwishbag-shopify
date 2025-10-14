@@ -6,6 +6,8 @@ import type { AppEnv } from './types'
 import authRoutes from './routes/auth'
 import tenantRoutes from './routes/tenant'
 import staffRoutes from './routes/staff'
+import inviteRoutes from './routes/invite'
+import publicInviteRoutes from './routes/public-invite'
 
 const app = new Hono<AppEnv>()
 
@@ -64,5 +66,7 @@ app.get('/health', (c) =>
 app.route('/v1/auth', authRoutes)
 app.route('/v1/tenants', tenantRoutes)
 app.route('/v1/staff', staffRoutes)
+app.route('/v1/invites', inviteRoutes)
+app.route('/public/invites', publicInviteRoutes)
 
 export default app
