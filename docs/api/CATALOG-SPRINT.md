@@ -6,10 +6,11 @@
 
 ## Sprint 3.1 – Catalog Depth
 - [x] Extend Prisma schema for variants, option sets, collections, and tags.
+- [x] Ship product variant/option/media/tag/collection services with authenticated Hono routes.
 - [ ] Add R2 asset management (product images upload + ordering).
 - [ ] Enforce plan-based product, variant, and image limits.
 - [ ] Background job to recompute inventory + search index (MeiliSearch) on changes.
-- [ ] Unit tests for catalog service edge cases (variants, soft delete, limits).
+- [x] Unit tests for catalog service edge cases (variants, soft delete, limits).
 
 ## Sprint 3.2 – Merchant Catalog UI
 - [ ] Build merchant `/catalog` pages (Next.js) with product grid, filters, bulk actions.
@@ -36,7 +37,8 @@
 ---
 
 **Testing & Observability**
-- [ ] Expand Vitest suites with catalog/storefront coverage.
+- [x] Expand Vitest suites with catalog coverage (variants/options/media/collections/tags).
+- [ ] Add storefront Vitest coverage and Playwright flows.
 - [ ] Add Playwright story for merchant catalog flows (future).
 - [ ] Ensure Better Stack monitors cover storefront endpoints.
 
