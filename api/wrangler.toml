@@ -18,3 +18,7 @@ r2_buckets = [
 [[queues.producers]]
 binding = "CATALOG_EVENTS"
 queue = "catalog-events"
+
+[[queues.producers]]
+binding = "INVENTORY_ALERTS"
+queue = "inventory-alerts"

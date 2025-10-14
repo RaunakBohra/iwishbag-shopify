@@ -25,7 +25,7 @@
 - [ ] Basic cart abstraction (Durable Object) ready for checkout sprint.
 
 ## Sprint 3.4 – Inventory & Logistics Integration
-- [ ] Inventory adjustments via webhooks (local couriers, manual adjustments).
+- [x] Inventory adjustments via webhooks (local couriers, manual adjustments).
 - [ ] Low-stock alerts + dashboard widgets.
 - [ ] TenantUsage enrichment (variants, images, collections counts).
 

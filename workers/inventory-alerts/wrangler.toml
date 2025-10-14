@@ -1,0 +1,10 @@
+name = "inventory-alerts-worker"
+main = "src/index.ts"
+compatibility_date = "2025-10-14"
+compatibility_flags = ["nodejs_compat"]
+tsconfig = "./tsconfig.json"
+
+[[queues.consumers]]
+queue = "inventory-alerts"
+max_batch_size = 10
+max_batch_timeout = 5

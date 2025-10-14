@@ -7,6 +7,7 @@ export interface EnvBindings {
   PROOF_OF_DELIVERY_BUCKET: R2Bucket
   BACKUPS_BUCKET: R2Bucket
   CATALOG_EVENTS?: Queue
+  INVENTORY_ALERTS?: Queue
   PRODUCT_MEDIA_PUBLIC_BASE_URL?: string
   DATABASE_URL: string
   POSTHOG_HOST?: string
