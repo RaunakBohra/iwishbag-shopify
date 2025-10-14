@@ -15,6 +15,7 @@ import productOptionRoutes from './routes/product-options'
 import productMediaRoutes from './routes/product-media'
 import productTagRoutes from './routes/product-tags'
 import productCollectionRoutes from './routes/product-collections'
+import storefrontProductRoutes from './routes/storefront-products'
 
 const app = new Hono<AppEnv>()
 
@@ -82,5 +83,6 @@ app.route('/v1/product-options', productOptionRoutes)
 app.route('/v1/product-media', productMediaRoutes)
 app.route('/v1/product-tags', productTagRoutes)
 app.route('/v1/product-collections', productCollectionRoutes)
+app.route('/public/v1/storefront', storefrontProductRoutes)
 
 export default app

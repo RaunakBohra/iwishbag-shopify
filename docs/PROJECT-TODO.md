@@ -20,7 +20,7 @@
 ## 3. Backend API Delivery (ref `docs/architecture/API-SPECIFICATIONS.md`)
 - [ ] Auth & session lifecycle endpoints + KV session store, audit events, rate limits.
 - [ ] Tenant & staff management endpoints with invite flow, plan limit enforcement.
-- [ ] Catalog & inventory APIs, R2 media uploads, MeiliSearch reindex queue.
+- [x] Catalog & inventory APIs, R2 media uploads, MeiliSearch reindex queue.
 - [ ] Pricing/discount logic with advisory locks, usage tracking.
 - [ ] Cart/checkout/order pipeline (Durable Objects cart, payments gateway factory, order events).
 - [ ] Fulfillment + logistics integrations (Pathao, Tootle, Nepal Post) with BYOK support.
@@ -87,7 +87,7 @@
 - [ ] Extend catalog schema (variants, collections, tags) and update migrations.
 - [x] Implement product media storage via R2 + image ordering.
 - [ ] Build merchant catalog UI (list + detail editor) with PostHog instrumentation.
-- [ ] Expose storefront product APIs and initial customer-facing pages.
+- [x] Expose storefront product APIs and initial customer-facing pages.
 - [ ] Wire inventory adjustments, low-stock alerts, and usage counters.
 - [ ] Implement multi-step onboarding wizard and checklist.
 - [ ] Expand automated tests (Vitest/Playwright) for catalog & storefront flows.

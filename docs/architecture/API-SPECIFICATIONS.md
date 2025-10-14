@@ -82,11 +82,12 @@ This document defines the REST surface for the Nepal E-Commerce Platform and bre
 - `POST /v1/collections`
 - `PATCH /v1/collections/:collectionId`
 - `GET /v1/collections`
+- `GET /public/v1/storefront/:tenantSlug/products`
 
 ### Implementation Tasks
 - [ ] Enforce optimistic concurrency via `updated_at` check on updates.
 - [ ] Upload product media to R2; return signed URLs.
-- [ ] Trigger MeiliSearch re-index via Cloudflare Queue on create/update/delete.
+- [x] Trigger MeiliSearch re-index via Cloudflare Queue on create/update/delete.
 - [ ] Add background job to recalc inventory counts nightly.
 - [ ] Validate variant SKUs unique per product.
 
@@ -252,4 +253,63 @@ This document defines the REST surface for the Nepal E-Commerce Platform and bre
 - [ ] Smoke suite executed post-deploy using Playwright synthetic monitor.
 - [ ] Update `docs/features/*` guides with actual endpoint paths.
 - [ ] Notify support + success teams once new endpoints reach production.
-
+- **Storefront Product Feed:** Provide unauthenticated product listing for customers via tenant slug, backed by MeiliSearch and inventory snapshots.
+- **Caching:** Cloudflare edge cache with `stale-while-revalidate=30s` and per-tenant cache keys to balance freshness and cost.
+- **/public/v1/storefront/:tenantSlug/products**
+  - **Purpose:** Customer-facing listing endpoint for storefront apps.
+  - **Query Params:**
+    - `q` (string): search term (typed, optional).
+    - `page` (number, default `1`), `pageSize` (number, default `24`, max `60`).
+    - `collection` (string): collection slug.
+    - `tags` (string[]): repeatable tag slugs.
+    - `priceMin`/`priceMax` (number): price filters in primary currency.
+    - `inStock` (boolean): restrict to available inventory.
+    - `sort` (enum): `relevance` (default), `price_asc`, `price_desc`, `newest`.
+  - **Response Shape:**
+```jsonc
+{
+  "data": [
+    {
+      "id": "prod_123",
+      "slug": "sunny-shirt",
+      "title": "Sunny Shirt",
+      "description": "Lightweight cotton",
+      "status": "ACTIVE",
+      "price": 1999,
+      "compareAtPrice": 2299,
+      "images": [
+        { "url": "https://cdn.example.com/...", "alt": "Front view" }
+      ],
+      "variants": [
+        { "id": "var_1", "name": "Small", "price": 1999, "inventory": 8 }
+      ],
+      "collections": ["spring-drop"],
+      "tags": ["cotton", "summer"],
+      "available": true,
+      "inventory": {
+        "available": 14,
+        "reserved": 2
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 24,
+    "total": 128,
+    "hasNextPage": true,
+    "facets": {
+      "collections": [{ "value": "spring-drop", "count": 42 }],
+      "tags": [{ "value": "cotton", "count": 58 }],
+      "priceRanges": [
+        { "min": 0, "max": 1500, "count": 25 },
+        { "min": 1501, "max": 3000, "count": 60 }
+      ]
+    }
+  }
+}
+```
+  - **Caching:**
+    - Cache key = `storefront:${tenantSlug}:${hash(query)}`.
+    - `Cache-Control: public, max-age=30, stale-while-revalidate=30`.
+    - Use Cloudflare Cache API in route handler; purge when catalog event worker processes updates.
+  - **Rate Limits:** Shared anonymous bucket per IP + per tenant to prevent scraping.

@@ -19,7 +19,7 @@
 - [ ] Hook into PostHog for CRUD events.
 
 ## Sprint 3.3 – Storefront API & Pages
-- [ ] Public `/v1/storefront/:tenantSlug/products` endpoints (search, pagination, filters).
+- [x] Public `/v1/storefront/:tenantSlug/products` endpoints (search, pagination, filters).
 - [ ] Implement customer-facing product pages in storefront app (Next.js app).
 - [ ] Add GSSP caching strategy (Cloudflare) and fallback behaviour.
 - [ ] Basic cart abstraction (Durable Object) ready for checkout sprint.

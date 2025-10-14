@@ -11,6 +11,8 @@ export interface EnvBindings {
   DATABASE_URL: string
   POSTHOG_HOST?: string
   POSTHOG_API_KEY?: string
+  MEILISEARCH_URL?: string
+  MEILISEARCH_KEY?: string
   BETTERSTACK_LOGS_TOKEN: string
   BETTERSTACK_LOGS_ENDPOINT?: string
   JWT_SECRET: string
