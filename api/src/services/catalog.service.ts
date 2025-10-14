@@ -153,19 +153,23 @@ export async function deleteProduct(env: EnvBindings, authUser: AuthUser, produc
   const prisma = getPrisma(env)
   const tenantId = requireTenantId(authUser)
 
-  const existing = await prisma.product.findFirst({
-    where: {
-      id: productId,
-      tenantId,
-      deletedAt: null
-    }
-  })
-
-  if (!existing) {
-    throw new HTTPException(404, { message: 'Product not found' })
-  }
-
   await prisma.$transaction(async (tx) => {
+    const product = await tx.product.findFirst({
+      where: {
+        id: productId,
+        tenantId,
+        deletedAt: null
+      },
+      include: {
+        variants: true,
+        images: true
+      }
+    })
+
+    if (!product) {
+      throw new HTTPException(404, { message: 'Product not found' })
+    }
+
     await tx.product.update({
       where: { id: productId },
       data: {
@@ -173,13 +177,24 @@ export async function deleteProduct(env: EnvBindings, authUser: AuthUser, produc
       }
     })
 
+    const usageUpdate: Prisma.TenantUsageUpdateInput = {
+      products: { decrement: 1 }
+    }
+
+    const variantsCount = product.variants.length
+    const imagesCount = product.images.length
+
+    if (variantsCount > 0) {
+      usageUpdate.variants = { decrement: variantsCount }
+    }
+
+    if (imagesCount > 0) {
+      usageUpdate.images = { decrement: imagesCount }
+    }
+
     await tx.tenantUsage.update({
       where: { tenantId },
-      data: {
-        products: {
-          decrement: 1
-        }
-      }
+      data: usageUpdate
     })
   })
 

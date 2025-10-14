@@ -8,7 +8,7 @@
 - [x] Extend Prisma schema for variants, option sets, collections, and tags.
 - [x] Ship product variant/option/media/tag/collection services with authenticated Hono routes.
 - [x] Add R2 asset management (product images upload + ordering).
-- [ ] Enforce plan-based product, variant, and image limits.
+- [x] Enforce plan-based product, variant, and image limits.
 - [ ] Background job to recompute inventory + search index (MeiliSearch) on changes.
 - [x] Unit tests for catalog service edge cases (variants, soft delete, limits).
 

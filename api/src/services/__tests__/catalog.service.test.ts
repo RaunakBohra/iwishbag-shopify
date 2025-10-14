@@ -65,7 +65,7 @@ beforeEach(() => {
   mockPrisma.tenant.findUnique.mockResolvedValue({
     id: 'tenant-1',
     plan: 'FREE',
-    usage: { products: 0 }
+    usage: { products: 0, variants: 0, images: 0 }
   })
 
   mockPrisma.product.create.mockResolvedValue({
@@ -90,6 +90,8 @@ beforeEach(() => {
     price: 10,
     sku: 'SKU-1',
     inventory: 5,
+    variants: [],
+    images: [],
     createdAt: new Date(),
     updatedAt: new Date()
   })
@@ -119,6 +121,43 @@ describe('catalog service', () => {
   it('soft deletes product and decrements usage', async () => {
     const result = await deleteProduct(env, authUser, 'prod-1')
     expect(result.success).toBe(true)
-    expect(mockPrisma.tenantUsage.update).toHaveBeenCalled()
+    expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tenantId: 'tenant-1' },
+        data: {
+          products: { decrement: 1 }
+        }
+      })
+    )
+  })
+
+  it('soft delete also decrements variants and images when present', async () => {
+    mockPrisma.product.findFirst.mockResolvedValueOnce({
+      id: 'prod-1',
+      tenantId: 'tenant-1',
+      title: 'Example',
+      description: 'Desc',
+      status: 'DRAFT',
+      price: 10,
+      sku: 'SKU-1',
+      inventory: 5,
+      variants: [{ id: 'v1' }, { id: 'v2' }],
+      images: [{ id: 'img-1' }],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+
+    await deleteProduct(env, authUser, 'prod-1')
+
+    expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tenantId: 'tenant-1' },
+        data: {
+          products: { decrement: 1 },
+          variants: { decrement: 2 },
+          images: { decrement: 1 }
+        }
+      })
+    )
   })
 })

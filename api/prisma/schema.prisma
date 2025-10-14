@@ -293,6 +293,8 @@ model TenantUsage {
   tenantId     String  @unique
   tenant       Tenant  @relation(fields: [tenantId], references: [id])
   products     Int     @default(0)
+  variants     Int     @default(0)
+  images       Int     @default(0)
   staff        Int     @default(0)
   orders       Int     @default(0)
   lastResetAt  DateTime?

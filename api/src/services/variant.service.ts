@@ -1,6 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
+import { getPlanLimits } from './tenant.service'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -58,30 +59,53 @@ export async function createVariant(env: EnvBindings, authUser: AuthUser, produc
   const prisma = getPrisma(env)
   const tenantId = requireTenantId(authUser)
 
-  const product = await ensureProduct(prisma, tenantId, productId)
+  await ensureProduct(prisma, tenantId, productId)
 
-  const variant = await prisma.productVariant.create({
-    data: {
-      productId,
-      name: payload.name,
-      sku: payload.sku,
-      price: payload.price !== undefined ? payload.price : undefined,
-      inventory: payload.inventory ?? 0
-    }
-  })
-
-  if (payload.optionValues?.length) {
-    await prisma.productOptionValue.createMany({
-      data: payload.optionValues.map((value) => ({
-        optionId: value.optionId,
-        variantId: variant.id,
-        value: value.value,
-        swatch: value.swatch
-      }))
+  return prisma.$transaction(async (tx) => {
+    const tenant = await tx.tenant.findUnique({
+      where: { id: tenantId },
+      include: { usage: true }
     })
-  }
 
-  return variant
+    if (!tenant || !tenant.usage) {
+      throw new HTTPException(404, { message: 'Tenant usage not found' })
+    }
+
+    const limits = getPlanLimits(tenant.plan)
+    if (tenant.usage.variants >= limits.variants) {
+      throw new HTTPException(409, { message: 'Variant limit reached for current plan' })
+    }
+
+    const variant = await tx.productVariant.create({
+      data: {
+        productId,
+        name: payload.name,
+        sku: payload.sku,
+        price: payload.price !== undefined ? payload.price : undefined,
+        inventory: payload.inventory ?? 0
+      }
+    })
+
+    if (payload.optionValues?.length) {
+      await tx.productOptionValue.createMany({
+        data: payload.optionValues.map((value) => ({
+          optionId: value.optionId,
+          variantId: variant.id,
+          value: value.value,
+          swatch: value.swatch
+        }))
+      })
+    }
+
+    await tx.tenantUsage.update({
+      where: { tenantId },
+      data: {
+        variants: { increment: 1 }
+      }
+    })
+
+    return variant
+  })
 }
 
 interface UpdateVariantPayload {
@@ -119,13 +143,25 @@ export async function deleteVariant(env: EnvBindings, authUser: AuthUser, produc
 
   await ensureProduct(prisma, tenantId, productId)
 
-  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } })
-  if (!variant || variant.productId !== productId) {
-    throw new HTTPException(404, { message: 'Variant not found' })
-  }
+  await prisma.$transaction(async (tx) => {
+    const variant = await tx.productVariant.findUnique({ where: { id: variantId } })
+    if (!variant || variant.productId !== productId) {
+      throw new HTTPException(404, { message: 'Variant not found' })
+    }
 
-  await prisma.productOptionValue.deleteMany({ where: { variantId } })
-  await prisma.productVariant.delete({ where: { id: variantId } })
+    await tx.productOptionValue.deleteMany({ where: { variantId } })
+    await tx.productVariant.delete({ where: { id: variantId } })
+
+    const usage = await tx.tenantUsage.findUnique({ where: { tenantId } })
+    if (usage && usage.variants > 0) {
+      await tx.tenantUsage.update({
+        where: { tenantId },
+        data: {
+          variants: { decrement: 1 }
+        }
+      })
+    }
+  })
 
   return { success: true }
 }

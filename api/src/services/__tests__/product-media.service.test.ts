@@ -19,7 +19,15 @@ const mockPrisma = {
     findUnique: vi.fn(),
     update: vi.fn(),
     delete: vi.fn()
-  }
+  },
+  tenant: {
+    findUnique: vi.fn()
+  },
+  tenantUsage: {
+    findUnique: vi.fn(),
+    update: vi.fn()
+  },
+  $transaction: vi.fn()
 } as any
 
 const mockBucket = {
@@ -64,7 +72,29 @@ beforeEach(() => {
     position: 0,
     objectKey: 'tenants/tenant-1/products/prod-1/1-img.jpg'
   })
-  mockPrisma.$transaction = vi.fn().mockImplementation(async (operations: any[]) => Promise.all(operations))
+  mockPrisma.tenant.findUnique.mockResolvedValue({
+    id: 'tenant-1',
+    plan: 'FREE',
+    usage: { products: 0, variants: 0, images: 0 }
+  })
+  mockPrisma.tenantUsage.findUnique.mockResolvedValue({
+    tenantId: 'tenant-1',
+    products: 0,
+    variants: 0,
+    images: 0
+  })
+  mockPrisma.tenantUsage.update.mockResolvedValue({})
+  mockPrisma.$transaction.mockImplementation(async (arg: any) => {
+    if (typeof arg === 'function') {
+      return arg(mockPrisma)
+    }
+
+    if (Array.isArray(arg)) {
+      return Promise.all(arg.map((op) => op))
+    }
+
+    return arg
+  })
 })
 
 describe('product media service', () => {
@@ -96,12 +126,31 @@ describe('product media service', () => {
         })
       })
     )
+    expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tenantId: 'tenant-1' },
+        data: { images: { increment: 1 } }
+      })
+    )
   })
 
   it('deletes an image from storage and database', async () => {
+    mockPrisma.tenantUsage.findUnique.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      products: 0,
+      variants: 0,
+      images: 1
+    })
+
     await deleteImage(env, authUser, 'prod-1', 'img-1')
     expect(mockBucket.delete).toHaveBeenCalledWith('tenants/tenant-1/products/prod-1/1-img.jpg')
     expect(mockPrisma.productImage.delete).toHaveBeenCalledWith({ where: { id: 'img-1' } })
+    expect(mockPrisma.tenantUsage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tenantId: 'tenant-1' },
+        data: { images: { decrement: 1 } }
+      })
+    )
   })
 
   it('reorders images for a product', async () => {
@@ -122,5 +171,27 @@ describe('product media service', () => {
       where: { id: 'img-1' },
       data: { position: 1 }
     })
+  })
+
+  it('prevents uploads when image limit reached', async () => {
+    mockPrisma.tenant.findUnique.mockResolvedValueOnce({
+      id: 'tenant-1',
+      plan: 'FREE',
+      usage: { products: 0, variants: 0, images: 250 }
+    })
+    mockPrisma.tenantUsage.findUnique.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      products: 0,
+      variants: 0,
+      images: 250
+    })
+
+    const file = new File([new Uint8Array([1, 2, 3])], 'Limit.JPG', { type: 'image/jpeg' })
+
+    await expect(addImage(env, authUser, 'prod-1', { file })).rejects.toMatchObject({
+      status: 409
+    })
+
+    expect(mockBucket.put).not.toHaveBeenCalled()
   })
 })

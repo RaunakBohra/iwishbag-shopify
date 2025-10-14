@@ -2,6 +2,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { slugify } from '../utils/slugify'
+import { getPlanLimits } from './tenant.service'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -88,6 +89,20 @@ export async function addImage(env: EnvBindings, authUser: AuthUser, productId: 
     throw new HTTPException(400, { message: 'Image file cannot be empty' })
   }
 
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: { usage: true }
+  })
+
+  if (!tenant || !tenant.usage) {
+    throw new HTTPException(404, { message: 'Tenant usage not found' })
+  }
+
+  const limits = getPlanLimits(tenant.plan)
+  if (tenant.usage.images >= limits.images) {
+    throw new HTTPException(409, { message: 'Image limit reached for current plan' })
+  }
+
   const objectKey = buildObjectKey(tenantId, productId, payload.file.name || 'image.bin')
   const contentType = payload.file.type || 'application/octet-stream'
 
@@ -101,26 +116,50 @@ export async function addImage(env: EnvBindings, authUser: AuthUser, productId: 
     }
   })
 
-  const existingImages = await prisma.productImage.findMany({
-    where: { productId },
-    orderBy: { position: 'desc' },
-    select: { position: true },
-    take: 1
-  })
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const usage = await tx.tenantUsage.findUnique({ where: { tenantId } })
+      if (!usage) {
+        throw new HTTPException(404, { message: 'Tenant usage not found' })
+      }
+      if (usage.images >= limits.images) {
+        throw new HTTPException(409, { message: 'Image limit reached for current plan' })
+      }
 
-  const nextPosition = existingImages.length ? existingImages[0].position + 1 : 0
+      const existingImages = await tx.productImage.findMany({
+        where: { productId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+        take: 1
+      })
 
-  return prisma.productImage.create({
-    data: {
-      productId,
-      url: resolvePublicUrl(env, objectKey),
-      alt: payload.alt,
-      position: nextPosition,
-      objectKey,
-      contentType,
-      fileSize: payload.file.size
-    }
-  })
+      const nextPosition = existingImages.length ? existingImages[0].position + 1 : 0
+
+      const created = await tx.productImage.create({
+        data: {
+          productId,
+          url: resolvePublicUrl(env, objectKey),
+          alt: payload.alt,
+          position: nextPosition,
+          objectKey,
+          contentType,
+          fileSize: payload.file.size
+        }
+      })
+
+      await tx.tenantUsage.update({
+        where: { tenantId },
+        data: {
+          images: { increment: 1 }
+        }
+      })
+
+      return created
+    })
+  } catch (error) {
+    await env.PRODUCT_MEDIA_BUCKET.delete(objectKey).catch(() => {})
+    throw error
+  }
 }
 
 export async function updateImage(env: EnvBindings, authUser: AuthUser, productId: string, imageId: string, payload: { alt?: string; position?: number }) {
@@ -149,16 +188,28 @@ export async function deleteImage(env: EnvBindings, authUser: AuthUser, productI
 
   await ensureProduct(prisma, tenantId, productId)
 
-  const existing = await prisma.productImage.findUnique({ where: { id: imageId } })
-  if (!existing || existing.productId !== productId) {
-    throw new HTTPException(404, { message: 'Image not found' })
-  }
+  const { objectKey } = await prisma.$transaction(async (tx) => {
+    const existing = await tx.productImage.findUnique({ where: { id: imageId } })
+    if (!existing || existing.productId !== productId) {
+      throw new HTTPException(404, { message: 'Image not found' })
+    }
 
-  if (existing.objectKey) {
-    await env.PRODUCT_MEDIA_BUCKET.delete(existing.objectKey)
-  }
+    await tx.productImage.delete({ where: { id: imageId } })
 
-  await prisma.productImage.delete({ where: { id: imageId } })
+    const usage = await tx.tenantUsage.findUnique({ where: { tenantId }, select: { images: true } })
+    if (usage && usage.images > 0) {
+      await tx.tenantUsage.update({
+        where: { tenantId },
+        data: { images: { decrement: 1 } }
+      })
+    }
+
+    return { objectKey: existing.objectKey }
+  })
+
+  if (objectKey) {
+    await env.PRODUCT_MEDIA_BUCKET.delete(objectKey).catch(() => {})
+  }
 
   return { success: true }
 }
