@@ -83,6 +83,15 @@
 - [ ] Track KPIs (merchants, ARR, churn) in ops dashboard once metrics available.
 - [ ] Schedule post-launch support (+24h watch) and customer success onboarding.
 
+## 10. Catalog & Storefront (Sprints 3–4)
+- [ ] Extend catalog schema (variants, collections, tags) and update migrations.
+- [ ] Implement product media storage via R2 + image ordering.
+- [ ] Build merchant catalog UI (list + detail editor) with PostHog instrumentation.
+- [ ] Expose storefront product APIs and initial customer-facing pages.
+- [ ] Wire inventory adjustments, low-stock alerts, and usage counters.
+- [ ] Implement multi-step onboarding wizard and checklist.
+- [ ] Expand automated tests (Vitest/Playwright) for catalog & storefront flows.
+
 ---
 
 **Usage:** Update status inline, link to tickets, and version-control this document as work progresses.
