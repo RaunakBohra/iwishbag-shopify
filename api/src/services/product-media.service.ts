@@ -4,6 +4,7 @@ import { getPrisma } from '../lib/prisma'
 import { slugify } from '../utils/slugify'
 import { getPlanLimits } from './tenant.service'
 import { applyUsageDelta } from './usage.service'
+import { enqueueCatalogEvent } from './catalog-events.service'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -118,7 +119,7 @@ export async function addImage(env: EnvBindings, authUser: AuthUser, productId: 
   })
 
   try {
-    return await prisma.$transaction(async (tx) => {
+    const image = await prisma.$transaction(async (tx) => {
       const usage = await tx.tenantUsage.findUnique({ where: { tenantId } })
       if (!usage) {
         throw new HTTPException(404, { message: 'Tenant usage not found' })
@@ -152,6 +153,20 @@ export async function addImage(env: EnvBindings, authUser: AuthUser, productId: 
 
       return created
     })
+
+    await enqueueCatalogEvent(env, {
+      event: 'product.media.updated',
+      tenantId,
+      productId,
+      mediaId: image.id,
+      initiator: authUser.userId,
+      metadata: {
+        action: 'created',
+        objectKey
+      }
+    })
+
+    return image
   } catch (error) {
     await env.PRODUCT_MEDIA_BUCKET.delete(objectKey).catch(() => {})
     throw error
@@ -169,13 +184,26 @@ export async function updateImage(env: EnvBindings, authUser: AuthUser, productI
     throw new HTTPException(404, { message: 'Image not found' })
   }
 
-  return prisma.productImage.update({
+  const updated = await prisma.productImage.update({
     where: { id: imageId },
     data: {
       alt: payload.alt ?? existing.alt,
       position: payload.position ?? existing.position
     }
   })
+
+  await enqueueCatalogEvent(env, {
+    event: 'product.media.updated',
+    tenantId,
+    productId,
+    mediaId: imageId,
+    initiator: authUser.userId,
+    metadata: {
+      action: 'updated'
+    }
+  })
+
+  return updated
 }
 
 export async function deleteImage(env: EnvBindings, authUser: AuthUser, productId: string, imageId: string) {
@@ -200,6 +228,18 @@ export async function deleteImage(env: EnvBindings, authUser: AuthUser, productI
   if (objectKey) {
     await env.PRODUCT_MEDIA_BUCKET.delete(objectKey).catch(() => {})
   }
+
+  await enqueueCatalogEvent(env, {
+    event: 'product.media.updated',
+    tenantId,
+    productId,
+    mediaId: imageId,
+    initiator: authUser.userId,
+    metadata: {
+      action: 'deleted',
+      objectKey
+    }
+  })
 
   return { success: true }
 }

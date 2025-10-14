@@ -3,6 +3,7 @@ import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { getPlanLimits } from './tenant.service'
 import { Prisma } from '@prisma/client'
+import { enqueueCatalogEvent } from './catalog-events.service'
 import { applyUsageDelta } from './usage.service'
 
 function requireTenantId(authUser: AuthUser) {
@@ -100,6 +101,19 @@ export async function createProduct(env: EnvBindings, authUser: AuthUser, payloa
     return created
   })
 
+  await enqueueCatalogEvent(env, {
+    event: 'product.created',
+    tenantId,
+    productId: product.id,
+    initiator: authUser.userId,
+    recomputeInventory: true,
+    metadata: {
+      sku: product.sku,
+      price: typeof product.price === 'object' && 'toNumber' in product.price ? product.price.toNumber() : Number(product.price),
+      status: product.status
+    }
+  })
+
   return product
 }
 
@@ -137,6 +151,17 @@ export async function updateProduct(env: EnvBindings, authUser: AuthUser, produc
       sku: payload.sku ?? existing.sku,
       inventory: payload.inventory ?? existing.inventory,
       status: payload.status ?? existing.status
+    }
+  })
+
+  await enqueueCatalogEvent(env, {
+    event: 'product.updated',
+    tenantId,
+    productId,
+    initiator: authUser.userId,
+    recomputeInventory: true,
+    metadata: {
+      updatedFields: Object.keys(payload).filter((key) => payload[key as keyof UpdateProductPayload] !== undefined)
     }
   })
 
@@ -179,6 +204,14 @@ export async function deleteProduct(env: EnvBindings, authUser: AuthUser, produc
       variants: variantsCount ? -variantsCount : undefined,
       images: imagesCount ? -imagesCount : undefined
     })
+  })
+
+  await enqueueCatalogEvent(env, {
+    event: 'product.deleted',
+    tenantId,
+    productId,
+    initiator: authUser.userId,
+    recomputeInventory: true
   })
 
   return { success: true }

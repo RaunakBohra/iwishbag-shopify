@@ -9,6 +9,10 @@ const authUser: AuthUser = {
   role: 'OWNER'
 }
 
+const queue = {
+  send: vi.fn().mockResolvedValue(undefined)
+}
+
 const mockPrisma = {
   product: {
     findFirst: vi.fn()
@@ -44,6 +48,7 @@ const env = {
   PRODUCT_MEDIA_BUCKET: {} as any,
   PROOF_OF_DELIVERY_BUCKET: {} as any,
   BACKUPS_BUCKET: {} as any,
+  CATALOG_EVENTS: queue as any,
   DATABASE_URL: '',
   BETTERSTACK_LOGS_TOKEN: 'token',
   JWT_SECRET: 'secret'
@@ -68,6 +73,7 @@ beforeEach(() => {
   })
   mockPrisma.tenantUsage.update.mockResolvedValue({})
   mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma))
+  queue.send.mockClear()
 })
 
 describe('variant service', () => {
@@ -91,6 +97,13 @@ describe('variant service', () => {
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
         data: { variants: 1 }
+      })
+    )
+    expect(queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'variant.created',
+        productId: 'prod-1',
+        variantId: 'variant-1'
       })
     )
   })

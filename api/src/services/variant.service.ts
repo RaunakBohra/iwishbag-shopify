@@ -3,6 +3,7 @@ import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { getPlanLimits } from './tenant.service'
 import { applyUsageDelta } from './usage.service'
+import { enqueueCatalogEvent } from './catalog-events.service'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -62,7 +63,7 @@ export async function createVariant(env: EnvBindings, authUser: AuthUser, produc
 
   await ensureProduct(prisma, tenantId, productId)
 
-  return prisma.$transaction(async (tx) => {
+  const variant = await prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.findUnique({
       where: { id: tenantId },
       include: { usage: true }
@@ -102,6 +103,17 @@ export async function createVariant(env: EnvBindings, authUser: AuthUser, produc
 
     return variant
   })
+
+  await enqueueCatalogEvent(env, {
+    event: 'variant.created',
+    tenantId,
+    productId,
+    variantId: variant.id,
+    initiator: authUser.userId,
+    recomputeInventory: true
+  })
+
+  return variant
 }
 
 interface UpdateVariantPayload {
@@ -122,7 +134,7 @@ export async function updateVariant(env: EnvBindings, authUser: AuthUser, produc
     throw new HTTPException(404, { message: 'Variant not found' })
   }
 
-  return prisma.productVariant.update({
+  const updated = await prisma.productVariant.update({
     where: { id: variantId },
     data: {
       name: payload.name ?? variant.name,
@@ -131,6 +143,17 @@ export async function updateVariant(env: EnvBindings, authUser: AuthUser, produc
       inventory: payload.inventory ?? variant.inventory
     }
   })
+
+  await enqueueCatalogEvent(env, {
+    event: 'variant.updated',
+    tenantId,
+    productId,
+    variantId,
+    initiator: authUser.userId,
+    recomputeInventory: payload.inventory !== undefined
+  })
+
+  return updated
 }
 
 export async function deleteVariant(env: EnvBindings, authUser: AuthUser, productId: string, variantId: string) {
@@ -149,6 +172,15 @@ export async function deleteVariant(env: EnvBindings, authUser: AuthUser, produc
     await tx.productVariant.delete({ where: { id: variantId } })
 
     await applyUsageDelta(tx, tenantId, { variants: -1 })
+  })
+
+  await enqueueCatalogEvent(env, {
+    event: 'variant.deleted',
+    tenantId,
+    productId,
+    variantId,
+    initiator: authUser.userId,
+    recomputeInventory: true
   })
 
   return { success: true }

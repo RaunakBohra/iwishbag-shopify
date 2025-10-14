@@ -9,6 +9,10 @@ const authUser: AuthUser = {
   role: 'OWNER'
 }
 
+const queue = {
+  send: vi.fn().mockResolvedValue(undefined)
+}
+
 const mockPrisma = {
   product: {
     findFirst: vi.fn()
@@ -46,6 +50,7 @@ const env = {
   PROOF_OF_DELIVERY_BUCKET: {} as any,
   BACKUPS_BUCKET: {} as any,
   PRODUCT_MEDIA_PUBLIC_BASE_URL: 'https://cdn.example.com',
+  CATALOG_EVENTS: queue as any,
   DATABASE_URL: '',
   BETTERSTACK_LOGS_TOKEN: 'token',
   JWT_SECRET: 'secret'
@@ -95,6 +100,7 @@ beforeEach(() => {
 
     return arg
   })
+  queue.send.mockClear()
 })
 
 describe('product media service', () => {
@@ -132,6 +138,13 @@ describe('product media service', () => {
         data: { images: 1 }
       })
     )
+    expect(queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'product.media.updated',
+        productId: 'prod-1',
+        mediaId: 'img-1'
+      })
+    )
   })
 
   it('deletes an image from storage and database', async () => {
@@ -149,6 +162,13 @@ describe('product media service', () => {
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
         data: { images: 0 }
+      })
+    )
+    expect(queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'product.media.updated',
+        mediaId: 'img-1',
+        metadata: expect.objectContaining({ action: 'deleted' })
       })
     )
   })

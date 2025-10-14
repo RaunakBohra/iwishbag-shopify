@@ -1,9 +1,12 @@
+import type { Queue } from '@cloudflare/workers-types'
+
 export interface EnvBindings {
   SESSIONS: KVNamespace
   RATE_LIMIT: KVNamespace
   PRODUCT_MEDIA_BUCKET: R2Bucket
   PROOF_OF_DELIVERY_BUCKET: R2Bucket
   BACKUPS_BUCKET: R2Bucket
+  CATALOG_EVENTS?: Queue
   PRODUCT_MEDIA_PUBLIC_BASE_URL?: string
   DATABASE_URL: string
   POSTHOG_HOST?: string

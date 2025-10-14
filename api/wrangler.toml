@@ -14,3 +14,7 @@ r2_buckets = [
   { binding = "PROOF_OF_DELIVERY_BUCKET", bucket_name = "nepshop-proof-of-delivery" },
   { binding = "BACKUPS_BUCKET", bucket_name = "nepshop-backups" }
 ]
+
+[[queues.producers]]
+binding = "CATALOG_EVENTS"
+queue = "catalog-events"

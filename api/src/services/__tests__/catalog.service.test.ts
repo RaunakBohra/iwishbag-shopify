@@ -30,12 +30,17 @@ vi.mock('../../lib/prisma', () => ({
   getPrisma: () => mockPrisma
 }))
 
+const queue = {
+  send: vi.fn().mockResolvedValue(undefined)
+}
+
 const env = {
   SESSIONS: {} as any,
   RATE_LIMIT: {} as any,
   PRODUCT_MEDIA_BUCKET: {} as any,
   PROOF_OF_DELIVERY_BUCKET: {} as any,
   BACKUPS_BUCKET: {} as any,
+  CATALOG_EVENTS: queue as any,
   DATABASE_URL: '',
   BETTERSTACK_LOGS_TOKEN: 'token',
   JWT_SECRET: 'secret'
@@ -105,6 +110,7 @@ beforeEach(() => {
     images: 0
   })
   mockPrisma.tenantUsage.update.mockResolvedValue({})
+  queue.send.mockClear()
 })
 
 describe('catalog service', () => {
@@ -131,6 +137,12 @@ describe('catalog service', () => {
         data: { products: 1 }
       })
     )
+    expect(queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'product.created',
+        productId: 'prod-1'
+      })
+    )
   })
 
   it('soft deletes product and decrements usage', async () => {
@@ -147,6 +159,12 @@ describe('catalog service', () => {
       expect.objectContaining({
         where: { tenantId: 'tenant-1' },
         data: { products: 0 }
+      })
+    )
+    expect(queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'product.deleted',
+        productId: 'prod-1'
       })
     )
   })
@@ -184,6 +202,12 @@ describe('catalog service', () => {
           variants: 0,
           images: 0
         }
+      })
+    )
+    expect(queue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'product.deleted',
+        productId: 'prod-1'
       })
     )
   })
