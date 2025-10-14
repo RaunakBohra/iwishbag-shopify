@@ -33,6 +33,17 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum ProductOptionType {
+  TEXT
+  SWATCH
+  IMAGE
+}
+
+enum CollectionVisibility {
+  PUBLIC
+  PRIVATE
+}
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -44,6 +55,8 @@ model Tenant {
   usage     TenantUsage?
   invitees  Invite[]
   products  Product[]
+  collections ProductCollection[]
+  tags        ProductTag[]
   users     User[]
   roles     Role[]
   auditLogs AuditLog[]
@@ -148,6 +161,9 @@ model Product {
   status      ProductStatus  @default(DRAFT)
   variants    ProductVariant[]
   images      ProductImage[]
+  options     ProductOption[]
+  tags        ProductTagging[]
+  collections ProductCollectionAssignment[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   deletedAt   DateTime?
@@ -163,6 +179,7 @@ model ProductVariant {
   sku        String?
   price      Decimal? @db.Decimal(10, 2)
   inventory  Int      @default(0)
+  optionValues ProductOptionValue[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -177,6 +194,81 @@ model ProductImage {
   alt        String?
   position   Int      @default(0)
   createdAt  DateTime @default(now())
+}
+
+model ProductOption {
+  id         String            @id @default(cuid())
+  productId  String
+  product    Product           @relation(fields: [productId], references: [id])
+  name       String
+  type       ProductOptionType @default(TEXT)
+  position   Int               @default(0)
+  values     ProductOptionValue[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+model ProductOptionValue {
+  id        String         @id @default(cuid())
+  optionId  String
+  option    ProductOption  @relation(fields: [optionId], references: [id])
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  value     String
+  swatch    String?
+  createdAt DateTime @default(now())
+
+  @@index([optionId])
+  @@index([variantId])
+}
+
+model ProductTag {
+  id        String  @id @default(cuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  name      String
+  slug      String
+  products  ProductTagging[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+}
+
+model ProductTagging {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  tagId     String
+  tag       ProductTag @relation(fields: [tagId], references: [id])
+}
+
+model ProductCollection {
+  id          String               @id @default(cuid())
+  tenantId    String
+  tenant      Tenant               @relation(fields: [tenantId], references: [id])
+  name        String
+  description String?
+  slug        String
+  visibility  CollectionVisibility @default(PUBLIC)
+  position    Int                  @default(0)
+  products    ProductCollectionAssignment[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@unique([tenantId, slug])
+}
+
+model ProductCollectionAssignment {
+  id            String            @id @default(cuid())
+  productId     String
+  product       Product           @relation(fields: [productId], references: [id])
+  collectionId  String
+  collection    ProductCollection @relation(fields: [collectionId], references: [id])
+  position      Int               @default(0)
+
+  @@index([productId])
+  @@index([collectionId])
 }
 
 model TenantSubscription {
