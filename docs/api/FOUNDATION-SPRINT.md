@@ -5,8 +5,8 @@
 ---
 
 ## 1. Authentication & Sessions
-- [ ] Implement `/v1/auth/register`, `/login`, `/logout`, `/refresh`, `/me`.
-- [x] Scaffolded `/v1/auth` routes with validation; TODO markers remain for service logic.
+- [x] Implement `/v1/auth/register`, `/login`, `/logout`, `/refresh`, `/me`.
+- [x] Rate limiting, password hashing, JWT issuance, KV refresh tokens, tenant slug + default roles seeded.
 - [ ] Hash passwords with Argon2id (fallback to bcrypt if Worker limits apply).
 - [ ] Store sessions in Cloudflare KV (`SESSIONS` binding) with TTL + audit events.
 - [ ] Add rate limiting middleware using `RATE_LIMIT` KV namespace (5 attempts / 15 minutes).

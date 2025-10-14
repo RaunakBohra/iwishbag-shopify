@@ -1,4 +1,5 @@
 import { HTTPException } from 'hono/http-exception'
+import { Prisma, PlanTier, type Role } from '@prisma/client'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { hashPassword, verifyPassword } from '../lib/password'
@@ -11,16 +12,68 @@ const REGISTER_LIMIT_TTL = 60 * 5 // 5 minutes
 const REGISTER_LIMIT_COUNT = 5
 const LOGIN_LIMIT_COUNT = 10
 const LOGIN_LIMIT_TTL = 60 * 5
+const DEFAULT_TRIAL_DAYS = 14
+const DEFAULT_SUBSCRIPTION_DAYS = 30
 
-function stripUser(user: { id: string; email: string; firstName?: string; lastName?: string; role: string; tenantId: string | null }) {
+const tenantSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  plan: true,
+  planStatus: true,
+  trialEndsAt: true
+}
+
+const userInclude = {
+  tenant: { select: tenantSelect },
+  roleAssignments: {
+    include: {
+      role: {
+        select: {
+          id: true,
+          name: true,
+          description: true
+        }
+      }
+    }
+  }
+} as const
+
+type UserWithRelations = Prisma.UserGetPayload<{
+  include: typeof userInclude
+}>
+
+function transformTenant(tenant: { id: string; name: string; slug: string; plan: PlanTier; planStatus: string; trialEndsAt: Date | null }) {
+  return {
+    id: tenant.id,
+    name: tenant.name,
+    slug: tenant.slug,
+    plan: tenant.plan,
+    planStatus: tenant.planStatus,
+    trialEndsAt: tenant.trialEndsAt
+  }
+}
+
+function transformUser(user: UserWithRelations) {
   return {
     id: user.id,
     email: user.email,
-    firstName: user.firstName ?? '',
-    lastName: user.lastName ?? '',
+    firstName: user.firstName,
+    lastName: user.lastName,
     role: user.role,
-    tenantId: user.tenantId
+    tenantId: user.tenantId,
+    roles: user.roleAssignments.map((assignment) => ({
+      id: assignment.role.id,
+      name: assignment.role.name,
+      description: assignment.role.description ?? undefined
+    }))
   }
+}
+
+function addDays(date: Date, days: number) {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + days)
+  return copy
 }
 
 async function issueTokens(env: EnvBindings, user: { id: string; tenantId: string | null; role: AuthUser['role']; email: string }) {
@@ -49,63 +102,95 @@ export async function register(env: EnvBindings, input: {
   lastName: string
   storeName: string
 }) {
-  await assertRateLimit(env, `register:${input.email.toLowerCase()}`, REGISTER_LIMIT_COUNT, REGISTER_LIMIT_TTL)
+  const email = input.email.toLowerCase()
+  await assertRateLimit(env, `register:${email}`, REGISTER_LIMIT_COUNT, REGISTER_LIMIT_TTL)
 
   const prisma = getPrisma(env)
-  const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } })
-  if (existing) {
-    throw new HTTPException(409, { message: 'Email already registered' })
-  }
-
   const passwordHash = await hashPassword(input.password)
-
   const slug = await generateTenantSlug(prisma, input.storeName)
-  const tenant = await prisma.tenant.create({
-    data: {
-      name: input.storeName,
-      slug,
-      users: {
-        create: {
-          email: input.email.toLowerCase(),
+  const trialEndsAt = addDays(new Date(), DEFAULT_TRIAL_DAYS)
+  const subscriptionEnd = addDays(new Date(), DEFAULT_SUBSCRIPTION_DAYS)
+
+  try {
+    const { tenant, owner } = await prisma.$transaction(async (tx) => {
+      const createdTenant = await tx.tenant.create({
+        data: {
+          name: input.storeName,
+          slug,
+          trialEndsAt
+        }
+      })
+
+      const ownerRole = await createDefaultRoles(tx, createdTenant.id)
+
+      const user = await tx.user.create({
+        data: {
+          tenantId: createdTenant.id,
+          email,
           passwordHash,
           firstName: input.firstName,
           lastName: input.lastName,
-          role: 'OWNER'
+          role: 'OWNER',
+          roleAssignments: {
+            create: {
+              roleId: ownerRole.id
+            }
+          }
+        },
+        include: userInclude
+      })
+
+      await tx.tenantUsage.create({
+        data: {
+          tenantId: createdTenant.id
         }
-      }
-    },
-    include: {
-      users: true
+      })
+
+      await tx.tenantSubscription.create({
+        data: {
+          tenantId: createdTenant.id,
+          plan: createdTenant.plan,
+          status: 'trial',
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: subscriptionEnd
+        }
+      })
+
+      return { tenant: createdTenant, owner: user }
+    })
+
+    const tokens = await issueTokens(env, {
+      id: owner.id,
+      tenantId: owner.tenantId,
+      role: owner.role,
+      email: owner.email
+    })
+
+    return {
+      user: transformUser(owner),
+      tenant: transformTenant(owner.tenant ?? tenant),
+      ...tokens
     }
-  })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new HTTPException(409, { message: 'Email already registered' })
+    }
 
-  const owner = tenant.users[0]
-  const tokens = await issueTokens(env, {
-    id: owner.id,
-    tenantId: tenant.id,
-    role: owner.role,
-    email: owner.email
-  })
-
-  return {
-    user: stripUser({ ...owner, tenantId: tenant.id }),
-    tenant: {
-      id: tenant.id,
-      name: tenant.name,
-      slug: tenant.slug,
-      plan: tenant.plan
-    },
-    ...tokens
+    throw error
   }
 }
 
 export async function login(env: EnvBindings, input: { email: string; password: string }) {
-  await assertRateLimit(env, `login:${input.email.toLowerCase()}`, LOGIN_LIMIT_COUNT, LOGIN_LIMIT_TTL)
+  const email = input.email.toLowerCase()
+  await assertRateLimit(env, `login:${email}`, LOGIN_LIMIT_COUNT, LOGIN_LIMIT_TTL)
 
   const prisma = getPrisma(env)
-  const user = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } })
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: userInclude
+  })
 
-  if (!user) {
+  if (!user || user.deletedAt) {
     throw new HTTPException(401, { message: 'Invalid email or password' })
   }
 
@@ -114,6 +199,13 @@ export async function login(env: EnvBindings, input: { email: string; password: 
     throw new HTTPException(401, { message: 'Invalid email or password' })
   }
 
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      lastLoginAt: new Date()
+    }
+  })
+
   const tokens = await issueTokens(env, {
     id: user.id,
     tenantId: user.tenantId ?? null,
@@ -122,16 +214,25 @@ export async function login(env: EnvBindings, input: { email: string; password: 
   })
 
   return {
-    user: stripUser(user),
+    user: transformUser(user),
+    tenant: user.tenant ? transformTenant(user.tenant) : null,
     ...tokens
   }
 }
 
 export async function logout(env: EnvBindings, refreshToken: string) {
+  if (!refreshToken) {
+    throw new HTTPException(400, { message: 'Refresh token required' })
+  }
+
   await revokeRefreshToken(env, refreshToken)
 }
 
 export async function refresh(env: EnvBindings, refreshToken: string) {
+  if (!refreshToken) {
+    throw new HTTPException(400, { message: 'Refresh token required' })
+  }
+
   const session = await getSessionByRefreshToken(env, refreshToken)
   if (!session) {
     throw new HTTPException(401, { message: 'Invalid refresh token' })
@@ -140,7 +241,11 @@ export async function refresh(env: EnvBindings, refreshToken: string) {
   await revokeRefreshToken(env, refreshToken)
 
   const prisma = getPrisma(env)
-  const user = await prisma.user.findUnique({ where: { id: session.userId } })
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    include: userInclude
+  })
+
   if (!user) {
     throw new HTTPException(401, { message: 'User no longer exists' })
   }
@@ -153,18 +258,46 @@ export async function refresh(env: EnvBindings, refreshToken: string) {
   })
 
   return {
-    user: stripUser(user),
+    user: transformUser(user),
+    tenant: user.tenant ? transformTenant(user.tenant) : null,
     ...tokens
   }
 }
 
 export async function me(env: EnvBindings, authUser: AuthUser) {
   const prisma = getPrisma(env)
-  const user = await prisma.user.findUnique({ where: { id: authUser.userId } })
+  const user = await prisma.user.findUnique({
+    where: { id: authUser.userId },
+    include: userInclude
+  })
 
   if (!user) {
     throw new HTTPException(401, { message: 'User no longer exists' })
   }
 
-  return stripUser(user)
+  return {
+    user: transformUser(user),
+    tenant: user.tenant ? transformTenant(user.tenant) : null
+  }
+}
+
+async function createDefaultRoles(tx: Prisma.TransactionClient, tenantId: string): Promise<Role> {
+  const ownerRole = await tx.role.create({
+    data: {
+      tenantId,
+      name: 'Owner',
+      description: 'Full access to manage the store',
+      isDefault: true
+    }
+  })
+
+  await tx.role.create({
+    data: {
+      tenantId,
+      name: 'Staff',
+      description: 'Manage catalog and orders'
+    }
+  })
+
+  return ownerRole
 }
