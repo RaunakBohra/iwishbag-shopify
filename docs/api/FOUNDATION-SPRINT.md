@@ -15,9 +15,9 @@
 - [x] Tenant invites (`create`, `list`, `resend`, `revoke`, `accept`), usage updates, and invite tests.
 
 ## 3. Admin Shell
-- [ ] Stand up placeholder `apps/admin` page protected by Cloudflare Access.
-- [ ] Add `/v1/admin/health` and `/v1/admin/tenants` stubs returning mock data.
-- [ ] Verify Cloudflare Access JWT is required for admin endpoints.
+- [x] Stand up placeholder `apps/admin` page protected by Cloudflare Access.
+- [x] Add `/v1/admin/health` and `/v1/admin/tenants` stubs returning mock data.
+- [x] Verify Cloudflare Access JWT is required for admin endpoints.
 
 ## 4. Observability & Testing
 - [x] Extend `logToBetterStack` usage for errors/exceptions.

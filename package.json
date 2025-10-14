@@ -5,18 +5,19 @@
   "description": "Multi-tenant e-commerce platform for Nepal",
   "workspaces": [
     "frontend",
+    "admin",
     "api",
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently \"pnpm --filter frontend dev\" \"pnpm --filter api dev\"",
-    "build": "pnpm --filter frontend build && pnpm --filter api build",
-    "deploy": "pnpm --filter frontend deploy && pnpm --filter api deploy",
-    "prisma:migrate": "pnpm --filter api prisma:migrate",
-    "prisma:generate": "pnpm --filter api prisma:generate",
-    "prisma:studio": "pnpm --filter api prisma:studio",
-    "lint": "pnpm --filter frontend lint && pnpm --filter api lint",
-    "type-check": "pnpm --filter frontend type-check && pnpm --filter api type-check"
+    "dev": "concurrently \"npm run --workspace admin dev\" \"npm run --workspace api dev\"",
+    "build": "npm run --workspace admin build && npm run --workspace api build",
+    "deploy": "npm run --workspace admin build && npm run --workspace api deploy",
+    "prisma:migrate": "npm run --workspace api prisma:migrate",
+    "prisma:generate": "npm run --workspace api prisma:generate",
+    "prisma:studio": "npm run --workspace api prisma:studio",
+    "lint": "npm run --workspace admin lint && npm run --workspace api lint",
+    "type-check": "npm run --workspace admin type-check && npm run --workspace api type-check"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
