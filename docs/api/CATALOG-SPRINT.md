@@ -5,7 +5,7 @@
 ---
 
 ## Sprint 3.1 – Catalog Depth
-- [ ] Extend Prisma schema for variants, option sets, collections, and tags.
+- [x] Extend Prisma schema for variants, option sets, collections, and tags.
 - [ ] Add R2 asset management (product images upload + ordering).
 - [ ] Enforce plan-based product, variant, and image limits.
 - [ ] Background job to recompute inventory + search index (MeiliSearch) on changes.
