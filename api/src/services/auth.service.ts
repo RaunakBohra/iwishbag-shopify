@@ -1,5 +1,6 @@
 import { HTTPException } from 'hono/http-exception'
-import { Prisma, PlanTier, type Role } from '@prisma/client'
+import { randomUUID } from 'node:crypto'
+import { Prisma, PlanTier } from '@prisma/client'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { hashPassword, verifyPassword } from '../lib/password'
@@ -7,6 +8,7 @@ import { generateTenantSlug } from '../lib/slug'
 import { generateAccessToken, generateRefreshToken } from '../lib/tokens'
 import { getSessionByRefreshToken, storeRefreshToken, revokeRefreshToken } from '../lib/session'
 import { assertRateLimit } from '../lib/rate-limit'
+import { createTenantWithDefaults } from '../../prisma/seeds/lib/tenant.js'
 
 const REGISTER_LIMIT_TTL = 60 * 5 // 5 minutes
 const REGISTER_LIMIT_COUNT = 5
@@ -70,12 +72,6 @@ function transformUser(user: UserWithRelations) {
   }
 }
 
-function addDays(date: Date, days: number) {
-  const copy = new Date(date)
-  copy.setDate(copy.getDate() + days)
-  return copy
-}
-
 async function issueTokens(env: EnvBindings, user: { id: string; tenantId: string | null; role: AuthUser['role']; email: string }) {
   const accessToken = await generateAccessToken(env, {
     sub: user.id,
@@ -108,56 +104,55 @@ export async function register(env: EnvBindings, input: {
   const prisma = getPrisma(env)
   const passwordHash = await hashPassword(input.password)
   const slug = await generateTenantSlug(prisma, input.storeName)
-  const trialEndsAt = addDays(new Date(), DEFAULT_TRIAL_DAYS)
-  const subscriptionEnd = addDays(new Date(), DEFAULT_SUBSCRIPTION_DAYS)
+  const provisioningTasks = [
+    'seed-theme',
+    'seed-feature-flags',
+    'seed-integrations',
+    'seed-demo-products',
+    'seed-notifications'
+  ]
 
   try {
-    const { tenant, owner } = await prisma.$transaction(async (tx) => {
-      const createdTenant = await tx.tenant.create({
-        data: {
-          name: input.storeName,
-          slug,
-          trialEndsAt
-        }
-      })
-
-      const ownerRole = await createDefaultRoles(tx, createdTenant.id)
-
-      const user = await tx.user.create({
-        data: {
-          tenantId: createdTenant.id,
-          email,
-          passwordHash,
-          firstName: input.firstName,
-          lastName: input.lastName,
-          role: 'OWNER',
-          roleAssignments: {
-            create: {
-              roleId: ownerRole.id
-            }
-          }
-        },
-        include: userInclude
-      })
-
-      await tx.tenantUsage.create({
-        data: {
-          tenantId: createdTenant.id
-        }
-      })
-
-      await tx.tenantSubscription.create({
-        data: {
-          tenantId: createdTenant.id,
-          plan: createdTenant.plan,
-          status: 'trial',
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: subscriptionEnd
-        }
-      })
-
-      return { tenant: createdTenant, owner: user }
+    const { tenant, ownerUser } = await createTenantWithDefaults(prisma, {
+      name: input.storeName,
+      slug,
+      trialDays: DEFAULT_TRIAL_DAYS,
+      subscriptionDays: DEFAULT_SUBSCRIPTION_DAYS,
+      owner: {
+        email,
+        passwordHash,
+        firstName: input.firstName,
+        lastName: input.lastName
+      },
+      provisioning: {
+        status: 'PENDING',
+        tasks: provisioningTasks
+      }
     })
+
+    const owner = await prisma.user.findUnique({
+      where: { id: ownerUser.id },
+      include: userInclude
+    })
+
+    if (!owner) {
+      throw new HTTPException(500, { message: 'Failed to create owner account' })
+    }
+
+    if (env.TENANT_PROVISIONING) {
+      try {
+        await env.TENANT_PROVISIONING.send({
+          tenantId: tenant.id,
+          adminUserId: owner.id,
+          tasks: provisioningTasks,
+          trigger: 'register',
+          traceId: randomUUID(),
+          requestedAt: new Date().toISOString()
+        })
+      } catch (queueError) {
+        console.error('Failed to enqueue tenant provisioning job after register', queueError)
+      }
+    }
 
     const tokens = await issueTokens(env, {
       id: owner.id,
@@ -279,25 +274,4 @@ export async function me(env: EnvBindings, authUser: AuthUser) {
     user: transformUser(user),
     tenant: user.tenant ? transformTenant(user.tenant) : null
   }
-}
-
-async function createDefaultRoles(tx: Prisma.TransactionClient, tenantId: string): Promise<Role> {
-  const ownerRole = await tx.role.create({
-    data: {
-      tenantId,
-      name: 'Owner',
-      description: 'Full access to manage the store',
-      isDefault: true
-    }
-  })
-
-  await tx.role.create({
-    data: {
-      tenantId,
-      name: 'Staff',
-      description: 'Manage catalog and orders'
-    }
-  })
-
-  return ownerRole
 }
