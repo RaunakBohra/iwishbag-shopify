@@ -379,51 +379,54 @@ CREATE TABLE products (
 
 ## 7. SHIPPING & LOGISTICS TABLES
 
-### `shipping_zones`
+### `shipping_profiles` *(in schema)*
 
-**Purpose:** Shipping regions (Nepal provinces/cities)
+- Tenant-level grouping of fulfilment strategies (e.g., general store vs. heavy goods) with optional metadata and default flag.
+- Relation: `shipping_zones`; unique per tenant name and indexed on `(tenant_id, is_default)`.
 
-```sql
-CREATE TABLE shipping_zones (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  provinces VARCHAR(50)[],
-  cities VARCHAR(100)[],
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Enforce single default per tenant via migration.
+- Add link to product/collection assignments once modelling for shipping requirements is complete.
 
-### `shipping_rates`
+### `shipping_zones` *(in schema)*
 
-**Purpose:** Shipping costs per zone
+- Belongs to a `shipping_profile`; captures named regions with configurable province/district lists, metadata, and active flag.
+- Indexed on `(tenant_id, is_active)`; cascades on profile deletion.
 
-```sql
-CREATE TABLE shipping_rates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  shipping_zone_id UUID REFERENCES shipping_zones(id) ON DELETE CASCADE,
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  price DECIMAL(10,2) NOT NULL,
-  min_weight DECIMAL(10,2),
-  max_weight DECIMAL(10,2),
-  min_order_amount DECIMAL(10,2),
-  max_order_amount DECIMAL(10,2),
-  min_delivery_days INT,
-  max_delivery_days INT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Replace free-form JSON with structured province/district references when lookup tables are seeded.
+
+### `shipping_rates` *(in schema)*
+
+- Holds per-zone pricing rules with rate type (`FLAT`, `WEIGHT`, `PRICE`), amount, min/max weight and subtotal thresholds, delivery window hints, and active flag.
+- Indexed on `(tenant_id, is_active)` for quick dashboard filtering.
+
+**Follow-ups**
+- Validate thresholds (min <= max) in application logic.
+- Attach currency overrides if multi-currency shipping arrives.
+
+### `shipping_providers` *(in schema)*
+
+- Stores third-party logistics integrations (Pathao, Tootle, Nepal Post) with slug, credential payload, activation state, and metadata.
+- Unique per tenant/slug combination; relation to `shipments` for auditability.
+
+**Follow-ups**
+- Encrypt `credentials` at rest.
+- Add webhooks configuration fields when provider integrations are fleshed out.
+
+### `shipments` *(in schema)*
+
+- Individual shipment records linked to orders (and optional fulfillments/providers) containing tracking details, status, timestamps, and metadata.
+- Indexed on `(tenant_id, status)` and `order_id` for fulfilment dashboards.
+
+**Follow-ups**
+- Normalize `status` into enum once workflow states are finalised.
+- Persist carrier events to trigger `fulfillment_events` or customer notifications.
 
 ### `fulfillments` *(in schema)*
 
 - Tracks execution of shipments per order, storing `FulfillmentStatus`, tracking metadata, shipped/delivered timestamps, and arbitrary metadata.
-- Relations: `fulfillment_items`, `fulfillment_events`; indexed by `order_id`.
+- Relations: `fulfillment_items`, `fulfillment_events`, new `shipments`; indexed by `order_id`.
 
 **Follow-ups**
 - Add warehouse/source fields and carrier service codes when multi-warehouse support lands.
@@ -451,72 +454,62 @@ CREATE TABLE shipping_rates (
 
 ## 8. MARKETING & COMMUNICATIONS TABLES
 
-### `email_templates`
+### `email_templates` *(in schema)*
 
-**Purpose:** To store email templates for various transactional emails.
+- Stores reusable email content blocks with subject/body payload (JSON to support localisation), category tagging, activation flag, and metadata.
+- Unique per tenant/name to avoid duplicates.
 
-```sql
-CREATE TABLE email_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  subject VARCHAR(255) NOT NULL,
-  body TEXT NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Add versioning/audit trail for template edits.
+- Support multi-language body payloads.
 
-### `sms_templates`
+### `sms_templates` *(in schema)*
 
-**Purpose:** To store SMS templates for various transactional SMS.
+- Similar to email templates but optimised for SMS body text; includes category, active flag, and metadata.
+- Unique per tenant/name.
 
-```sql
-CREATE TABLE sms_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  message TEXT NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
----
+**Follow-ups**
+- Enforce message length/encoding constraints before dispatch.
 
 ## 9. ANALYTICS & REPORTING TABLES
 
-### `page_views`
+### `page_views` *(in schema)*
 
-**Purpose:** To store page view data for analytics.
+- Captures frontend analytics (path, referrer, UA, IP, optional session metadata) with timestamp for trend analysis.
+- Indexed by `(tenant_id, occurred_at)` for time-series queries.
 
-```sql
-CREATE TABLE page_views (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  path VARCHAR(255) NOT NULL,
-  referrer VARCHAR(255),
-  user_agent VARCHAR(255),
-  ip_address VARCHAR(45),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Integrate GeoIP enrichment downstream if needed.
 
-### `events`
+### `analytics_events` *(in schema)*
 
-**Purpose:** To store custom events for analytics.
+- Generic event telemetry with JSON properties, optional customer linkage, and occurrence timestamp.
+- Indexed by tenant/time and customer for funnels and segmentation.
 
-```sql
-CREATE TABLE events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  properties JSONB,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Enforce event name taxonomy via enum/lookup table once analytics roadmap is finalised.
+
+### `loyalty_programs` *(in schema)*
+
+- Defines tenant loyalty schemes, configuration JSON, activation flag, and metadata; relations to transactions/referrals.
+
+**Follow-ups**
+- Model plan tiers/reward rules explicitly once business rules stabilise.
+
+### `loyalty_transactions` *(in schema)*
+
+- Ledger of points awarded/deducted per program and customer, tracking running balance and metadata.
+
+**Follow-ups**
+- Add double-entry validation if programs require more rigorous accounting.
+
+### `referrals` *(in schema)*
+
+- Links referrers to referred customers/emails, with optional loyalty program association, status tracking, and metadata.
+
+**Follow-ups**
+- Add unique constraint preventing duplicate active referrals for same email.
+- Store incentive payout references once implemented.
 
 ---
 
