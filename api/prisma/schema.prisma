@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
 }
 
@@ -52,242 +52,352 @@ enum InventoryAdjustmentReason {
   OTHER
 }
 
+model SubscriptionPlan {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  description       String?
+  priceMonthly      Decimal  @default("0") @db.Decimal(10, 2)
+  priceYearly       Decimal  @default("0") @db.Decimal(10, 2)
+  maxProducts       Int      @default(-1)
+  maxOrdersPerMonth Int      @default(-1)
+  maxStaff          Int      @default(1)
+  maxStorageGb      Int      @default(1)
+  maxEmailPerMonth  Int      @default(0)
+  maxSmsPerMonth    Int      @default(0)
+  features          Json?
+  isActive          Boolean  @default(true)
+  displayOrder      Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  tenants           Tenant[]
+}
+
+model TenantSetting {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  preferences Json?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Theme {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  config      Json?
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  stores      Store[]
+}
+
+model Store {
+  id             String        @id @default(cuid())
+  tenantId       String        @unique
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  name           String
+  slug           String        @unique
+  description    String?
+  themeId        String?
+  theme          Theme?        @relation(fields: [themeId], references: [id])
+  logoUrl        String?
+  faviconUrl     String?
+  primaryColor   String?
+  secondaryColor String?
+  settings       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  domains        StoreDomain[]
+
+  @@index([themeId])
+}
+
+model StoreDomain {
+  id         String    @id @default(cuid())
+  storeId    String
+  store      Store     @relation(fields: [storeId], references: [id])
+  hostname   String    @unique
+  isPrimary  Boolean   @default(false)
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  plan      PlanTier @default(FREE)
-  planStatus String  @default("trial")
-  trialEndsAt DateTime?
-  subscription TenantSubscription?
-  usage     TenantUsage?
-  invitees  Invite[]
-  products  Product[]
-  collections ProductCollection[]
-  tags        ProductTag[]
-  users     User[]
-  roles     Role[]
-  auditLogs AuditLog[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                       String                @id @default(cuid())
+  name                     String
+  slug                     String                @unique
+  plan                     PlanTier              @default(FREE)
+  planStatus               String                @default("trial")
+  trialEndsAt              DateTime?
+  email                    String?               @unique
+  phone                    String?
+  businessName             String?
+  businessType             String?
+  panNumber                String?
+  vatNumber                String?
+  registrationNumber       String?
+  paymentProviderAccountId String?
+  maxProducts              Int?                  @default(25)
+  maxOrdersPerMonth        Int?                  @default(50)
+  maxStaff                 Int?                  @default(1)
+  maxStorageGb             Int?                  @default(1)
+  timezone                 String                @default("Asia/Kathmandu")
+  currency                 String                @default("NPR")
+  language                 String                @default("ne")
+  dateFormat               String                @default("YYYY/MM/DD")
+  status                   String                @default("pending")
+  kycStatus                String                @default("pending")
+  kycSubmittedAt           DateTime?
+  kycApprovedAt            DateTime?
+  metadata                 Json?
+  planId                   String?
+  subscription             TenantSubscription?
+  usage                    TenantUsage?
+  store                    Store?
+  settings                 TenantSetting?
+  planReference            SubscriptionPlan?     @relation(fields: [planId], references: [id])
+  invitees                 Invite[]
+  products                 Product[]
+  collections              ProductCollection[]
+  tags                     ProductTag[]
+  inventory                ProductInventory[]
+  inventoryAdjustments     InventoryAdjustment[]
+  users                    User[]
+  roles                    Role[]
+  auditLogs                AuditLog[]
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  deletedAt                DateTime?
+
+  @@index([planId])
 }
 
 model User {
-  id           String    @id @default(cuid())
-  tenantId     String?
-  tenant       Tenant?   @relation(fields: [tenantId], references: [id])
-  email        String    @unique
-  passwordHash String
-  firstName    String
-  lastName     String
-  role         UserRole
-  avatarUrl    String?
-  locale       String?   @default("en")
-  lastLoginAt  DateTime?
-  lastLoginIp  String?
-  invite       Invite?   @relation("invitee")
-  inviteId     String?   @unique
-  invitedUsers Invite[]  @relation("inviter")
+  id              String               @id @default(cuid())
+  tenantId        String?
+  tenant          Tenant?              @relation(fields: [tenantId], references: [id])
+  email           String               @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  role            UserRole
+  avatarUrl       String?
+  locale          String?              @default("en")
+  lastLoginAt     DateTime?
+  lastLoginIp     String?
+  invite          Invite?              @relation("invitee")
+  inviteId        String?              @unique
+  invitedUsers    Invite[]             @relation("inviter")
   roleAssignments UserRoleAssignment[]
-  auditLogs    AuditLog[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  auditLogs       AuditLog[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  deletedAt       DateTime?
 }
 
 model Role {
-  id        String   @id @default(cuid())
-  tenantId  String?
-  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
-  name      String
+  id          String               @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?              @relation(fields: [tenantId], references: [id])
+  name        String
   description String?
-  isDefault Boolean @default(false)
-  users         UserRoleAssignment[]
-  permissions   RolePermission[]
-  invites       Invite[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isDefault   Boolean              @default(false)
+  users       UserRoleAssignment[]
+  permissions RolePermission[]
+  invites     Invite[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
   @@unique([tenantId, name])
 }
 
 model Permission {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String           @id @default(cuid())
+  name        String           @unique
   description String?
   roles       RolePermission[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model RolePermission {
-  id           String      @id @default(cuid())
+  id           String     @id @default(cuid())
   roleId       String
   permissionId String
-  role         Role        @relation(fields: [roleId], references: [id])
-  permission   Permission  @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
 }
 
 model UserRoleAssignment {
-  id      String @id @default(cuid())
-  userId  String
-  roleId  String
-  user    User  @relation(fields: [userId], references: [id])
-  role    Role  @relation(fields: [roleId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
 
   @@unique([userId, roleId])
 }
 
 model Invite {
-  id          String            @id @default(cuid())
-  tenantId    String
-  tenant      Tenant            @relation(fields: [tenantId], references: [id])
-  email       String
-  inviterId   String
-  inviter     User              @relation("inviter", fields: [inviterId], references: [id])
-  roleId      String
-  role        Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  inviteeId   String?   @unique
-  invitee     User?             @relation("invitee", fields: [inviteeId], references: [id])
-  status      InvitationStatus  @default(PENDING)
-  token       String            @unique
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id         String           @id @default(cuid())
+  tenantId   String
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  email      String
+  inviterId  String
+  inviter    User             @relation("inviter", fields: [inviterId], references: [id])
+  roleId     String
+  role       Role             @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  inviteeId  String?          @unique
+  invitee    User?            @relation("invitee", fields: [inviteeId], references: [id])
+  status     InvitationStatus @default(PENDING)
+  token      String           @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 }
 
 model Product {
-  id          String         @id @default(cuid())
-  tenantId    String
-  tenant      Tenant         @relation(fields: [tenantId], references: [id])
-  title       String
-  description String?
-  sku         String?
-  price       Decimal        @db.Decimal(10, 2)
-  inventory   Int            @default(0)
-  status      ProductStatus  @default(DRAFT)
-  variants    ProductVariant[]
-  images      ProductImage[]
-  options     ProductOption[]
-  tags        ProductTagging[]
-  collections ProductCollectionAssignment[]
-  lowStockThreshold Int?      @default(5)
-  lastLowStockAlertAt DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  deletedAt   DateTime?
+  id                   String                        @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                        @relation(fields: [tenantId], references: [id])
+  title                String
+  description          String?
+  sku                  String?
+  price                Decimal                       @db.Decimal(10, 2)
+  inventory            Int                           @default(0)
+  status               ProductStatus                 @default(DRAFT)
+  variants             ProductVariant[]
+  images               ProductImage[]
+  options              ProductOption[]
+  tags                 ProductTagging[]
+  collections          ProductCollectionAssignment[]
+  inventoryEntries     ProductInventory[]
+  inventoryAdjustments InventoryAdjustment[]
+  lowStockThreshold    Int?                          @default(5)
+  lastLowStockAlertAt  DateTime?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  deletedAt            DateTime?
 
   @@index([tenantId])
 }
 
 model ProductVariant {
-  id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  name       String
-  sku        String?
-  price      Decimal? @db.Decimal(10, 2)
-  inventory  Int      @default(0)
-  optionValues ProductOptionValue[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                   String                @id @default(cuid())
+  productId            String
+  product              Product               @relation(fields: [productId], references: [id])
+  name                 String
+  sku                  String?
+  price                Decimal?              @db.Decimal(10, 2)
+  inventory            Int                   @default(0)
+  optionValues         ProductOptionValue[]
+  inventoryEntries     ProductInventory[]
+  inventoryAdjustments InventoryAdjustment[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   @@index([productId])
 }
 
 model ProductImage {
-  id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  url        String
-  alt        String?
-  position   Int      @default(0)
-  objectKey  String?
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  url         String
+  alt         String?
+  position    Int      @default(0)
+  objectKey   String?
   contentType String?
-  fileSize   Int?
-  createdAt  DateTime @default(now())
+  fileSize    Int?
+  createdAt   DateTime @default(now())
 }
 
 model ProductInventory {
-  id         String   @id @default(cuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  variantId  String?
-  variant    ProductVariant? @relation(fields: [variantId], references: [id])
-  available  Int      @default(0)
-  reserved   Int      @default(0)
-  incoming   Int      @default(0)
-  lowStockThreshold Int? @default(5)
-  lastAlertAt DateTime?
-  updatedAt  DateTime @updatedAt
+  id                String          @id @default(cuid())
+  tenantId          String
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
+  productId         String
+  product           Product         @relation(fields: [productId], references: [id])
+  variantId         String?
+  variant           ProductVariant? @relation(fields: [variantId], references: [id])
+  available         Int             @default(0)
+  reserved          Int             @default(0)
+  incoming          Int             @default(0)
+  lowStockThreshold Int?            @default(5)
+  lastAlertAt       DateTime?
+  updatedAt         DateTime        @updatedAt
 
   @@unique([productId, variantId])
   @@index([tenantId])
 }
 
 model ProductOption {
-  id         String            @id @default(cuid())
-  productId  String
-  product    Product           @relation(fields: [productId], references: [id])
-  name       String
-  type       ProductOptionType @default(TEXT)
-  position   Int               @default(0)
-  values     ProductOptionValue[]
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id        String               @id @default(cuid())
+  productId String
+  product   Product              @relation(fields: [productId], references: [id])
+  name      String
+  type      ProductOptionType    @default(TEXT)
+  position  Int                  @default(0)
+  values    ProductOptionValue[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 }
 
 model ProductOptionValue {
-  id        String         @id @default(cuid())
+  id        String          @id @default(cuid())
   optionId  String
-  option    ProductOption  @relation(fields: [optionId], references: [id])
+  option    ProductOption   @relation(fields: [optionId], references: [id])
   variantId String?
   variant   ProductVariant? @relation(fields: [variantId], references: [id])
   value     String
   swatch    String?
-  createdAt DateTime @default(now())
+  createdAt DateTime        @default(now())
 
   @@index([optionId])
   @@index([variantId])
 }
 
 model ProductTag {
-  id        String  @id @default(cuid())
+  id        String           @id @default(cuid())
   tenantId  String
-  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  tenant    Tenant           @relation(fields: [tenantId], references: [id])
   name      String
   slug      String
   products  ProductTagging[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@unique([tenantId, slug])
 }
 
 model ProductTagging {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product    @relation(fields: [productId], references: [id])
   tagId     String
   tag       ProductTag @relation(fields: [tagId], references: [id])
 }
 
 model InventoryAdjustment {
-  id         String   @id @default(cuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  variantId  String?
-  variant    ProductVariant? @relation(fields: [variantId], references: [id])
-  quantity   Int
-  reason     InventoryAdjustmentReason @default(MANUAL)
-  memo       String?
-  createdBy  String
-  createdAt  DateTime @default(now())
+  id        String                    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant                    @relation(fields: [tenantId], references: [id])
+  productId String
+  product   Product                   @relation(fields: [productId], references: [id])
+  variantId String?
+  variant   ProductVariant?           @relation(fields: [variantId], references: [id])
+  quantity  Int
+  reason    InventoryAdjustmentReason @default(MANUAL)
+  memo      String?
+  createdBy String
+  createdAt DateTime                  @default(now())
 
   @@index([tenantId])
   @@index([productId])
@@ -295,59 +405,59 @@ model InventoryAdjustment {
 }
 
 model ProductCollection {
-  id          String               @id @default(cuid())
+  id          String                        @id @default(cuid())
   tenantId    String
-  tenant      Tenant               @relation(fields: [tenantId], references: [id])
+  tenant      Tenant                        @relation(fields: [tenantId], references: [id])
   name        String
   description String?
   slug        String
-  visibility  CollectionVisibility @default(PUBLIC)
-  position    Int                  @default(0)
+  visibility  CollectionVisibility          @default(PUBLIC)
+  position    Int                           @default(0)
   products    ProductCollectionAssignment[]
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  createdAt   DateTime                      @default(now())
+  updatedAt   DateTime                      @updatedAt
 
   @@unique([tenantId, slug])
 }
 
 model ProductCollectionAssignment {
-  id            String            @id @default(cuid())
-  productId     String
-  product       Product           @relation(fields: [productId], references: [id])
-  collectionId  String
-  collection    ProductCollection @relation(fields: [collectionId], references: [id])
-  position      Int               @default(0)
+  id           String            @id @default(cuid())
+  productId    String
+  product      Product           @relation(fields: [productId], references: [id])
+  collectionId String
+  collection   ProductCollection @relation(fields: [collectionId], references: [id])
+  position     Int               @default(0)
 
   @@index([productId])
   @@index([collectionId])
 }
 
 model TenantSubscription {
-  id          String   @id @default(cuid())
-  tenantId    String   @unique
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  plan        PlanTier
-  status      String   @default("active")
+  id                 String   @id @default(cuid())
+  tenantId           String   @unique
+  tenant             Tenant   @relation(fields: [tenantId], references: [id])
+  plan               PlanTier
+  status             String   @default("active")
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
-  cancelAtPeriodEnd Boolean @default(false)
-  externalId  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  cancelAtPeriodEnd  Boolean  @default(false)
+  externalId         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model TenantUsage {
-  id           String  @id @default(cuid())
-  tenantId     String  @unique
-  tenant       Tenant  @relation(fields: [tenantId], references: [id])
-  products     Int     @default(0)
-  variants     Int     @default(0)
-  images       Int     @default(0)
-  staff        Int     @default(0)
-  orders       Int     @default(0)
-  lastResetAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String    @id @default(cuid())
+  tenantId    String    @unique
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  products    Int       @default(0)
+  variants    Int       @default(0)
+  images      Int       @default(0)
+  staff       Int       @default(0)
+  orders      Int       @default(0)
+  lastResetAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model AuditLog {

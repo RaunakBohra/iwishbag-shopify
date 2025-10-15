@@ -25,201 +25,98 @@
 
 ## 1. CORE SYSTEM TABLES
 
-### `tenants`
+### `tenants` *(in schema)*
 
-**Purpose:** Multi-tenant isolation - each merchant is a tenant
+- `id` (`cuid`, primary key)
+- `name`, `slug` (unique), `plan`, `plan_status`, `trial_ends_at`
+- Relations: `subscription` (`TenantSubscription?`), `usage` (`TenantUsage?`), `users`, `roles`, `products`, `collections`, `tags`, `inventory`, `inventoryAdjustments`, `invitees`, `auditLogs`
+- Timestamps: `created_at`, `updated_at`
 
-```sql
-CREATE TABLE tenants (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  slug VARCHAR(100) UNIQUE NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  phone VARCHAR(20),
-  business_name VARCHAR(255),
-  business_type VARCHAR(50),
-  pan_number VARCHAR(20),
-  vat_number VARCHAR(20),
-  registration_number VARCHAR(50),
-  plan_id UUID REFERENCES subscription_plans(id),
-  plan_status VARCHAR(20) DEFAULT 'trial',
-  trial_ends_at TIMESTAMP,
-  subscription_starts_at TIMESTAMP,
-  subscription_ends_at TIMESTAMP,
-  payment_provider_account_id VARCHAR(255) UNIQUE,
-  max_products INT DEFAULT 25,
-  max_orders_per_month INT DEFAULT 50,
-  max_staff INT DEFAULT 1,
-  max_storage_gb INT DEFAULT 1,
-  timezone VARCHAR(50) DEFAULT 'Asia/Kathmandu',
-  currency VARCHAR(3) DEFAULT 'NPR',
-  language VARCHAR(5) DEFAULT 'ne',
-  date_format VARCHAR(20) DEFAULT 'YYYY/MM/DD',
-  status VARCHAR(20) DEFAULT 'pending',
-  kyc_status VARCHAR(20) DEFAULT 'pending',
-  kyc_submitted_at TIMESTAMP,
-  kyc_approved_at TIMESTAMP,
-  settings JSONB DEFAULT '{}',
-  metadata JSONB DEFAULT '{}',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  deleted_at TIMESTAMP
-);
-```
+**Gaps vs blueprint**
+- Missing tenant contact & compliance fields (`email`, `phone`, `business_name`, `PAN`, `VAT`, KYC metadata).
+- No plan limits (`max_products`, `max_staff`, etc.), timezone/currency settings, or JSON `settings/metadata`.
+- Needs soft-delete column (`deleted_at`) annotated for filters.
+- RLS policy pending (see Section 2).
 
-### `subscription_plans`
+**Indexes / constraints**
+- `slug` unique (✅).
+- Add composite unique on `(id, slug)` not required.
+- Consider partial index on active tenants post soft-delete.
 
-**Purpose:** Platform pricing tiers (Free, Pro, Max)
+### `subscription_plans` *(in schema)*
 
-```sql
-CREATE TABLE subscription_plans (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(50) NOT NULL,
-  slug VARCHAR(50) UNIQUE NOT NULL,
-  description TEXT,
-  price_monthly DECIMAL(10,2) DEFAULT 0,
-  price_yearly DECIMAL(10,2) DEFAULT 0,
-  max_products INT DEFAULT -1,
-  max_orders_per_month INT DEFAULT -1,
-  max_staff INT DEFAULT 1,
-  max_storage_gb INT DEFAULT 1,
-  max_email_per_month INT DEFAULT 0,
-  max_sms_per_month INT DEFAULT 0,
-  features JSONB DEFAULT '{}',
-  is_active BOOLEAN DEFAULT true,
-  display_order INT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+- Fields: `id`, `name`, `slug` (unique), optional `description`.
+- Pricing: `price_monthly`, `price_yearly` (decimal, default 0).
+- Limits: `max_products`, `max_orders_per_month`, `max_staff`, `max_storage_gb`, `max_email_per_month`, `max_sms_per_month`.
+- Metadata: JSON `features`, `is_active`, `display_order`, timestamps.
+- Relation: `tenants` back-reference via optional `tenant.planId`.
+
+**Follow-ups**
+- Seed default Free/Pro/Max plans and map existing tenant enum usage.
+- Evaluate migrating away from enum `PlanTier` once foreign key in use.
 
 ---
 
 ## 2. USER & AUTHENTICATION TABLES
 
-### `users`
+### `users` *(in schema)*
 
-**Purpose:** All users (merchants, customers, staff, admins)
+- Fields: `id`, `tenant_id` (nullable), `email` (unique), `password_hash`, personal details, `role`, audit timestamps, `deleted_at`.
+- Relations: `tenant`, `invite`, `invitedUsers`, `roleAssignments`, `auditLogs`.
 
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  phone VARCHAR(20),
-  username VARCHAR(50) UNIQUE,
-  first_name VARCHAR(100),
-  last_name VARCHAR(100),
-  avatar_url TEXT,
-  password_hash VARCHAR(255),
-  email_verified_at TIMESTAMP,
-  phone_verified_at TIMESTAMP,
-  role VARCHAR(20) NOT NULL,
-  two_factor_enabled BOOLEAN DEFAULT false,
-  two_factor_secret VARCHAR(255),
-  status VARCHAR(20) DEFAULT 'active',
-  last_login_at TIMESTAMP,
-  last_login_ip VARCHAR(45),
-  language VARCHAR(5) DEFAULT 'ne',
-  timezone VARCHAR(50) DEFAULT 'Asia/Kathmandu',
-  metadata JSONB DEFAULT '{}',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  deleted_at TIMESTAMP
-);
-```
+**Gaps**
+- Missing phone, username, language/timezone defaults, 2FA columns, status enum, verification timestamps, metadata JSON.
+- Requires composite unique index `(tenant_id, email)` when tenant scoped.
+- Soft delete column present (`deleted_at`), but Prisma filters/tests needed.
+
+**Indexes / constraints**
+- Add `@@index([tenantId])` for lookups (optional).
+- Implement unique constraint or partial unique per tenant.
 
 ---
 
 ## 3. MERCHANT & STORE TABLES
 
-### `stores`
+### `themes` *(in schema)*
 
-**Purpose:** E-commerce store configuration
+- Platform-level catalog of themes with `name`, `slug`, optional `description`.
+- JSON `config` placeholder for default layout settings.
+- Flags: `is_default`, `is_active`; timestamps maintained automatically.
+- Relation: `stores` referencing active theme assignments.
 
-```sql
-CREATE TABLE stores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  slug VARCHAR(100) UNIQUE NOT NULL,
-  -- ... and other store settings
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Define config schema (JSON Schema) and validation hook.
+- Seed curated starter themes with preview metadata.
 
-### `staff_members`
+### `stores` *(in schema)*
 
-**Purpose:** Store staff member information.
+- One-to-one relationship with `tenants` (`tenant_id` unique).
+- Fields: `id`, `name`, `slug` (unique), optional `description`.
+- Branding: `logo_url`, `favicon_url`, `primary_color`, `secondary_color`.
+- Optional `theme_id` referencing `themes`, JSON `settings` for customised overrides.
+- Tracks `created_at`, `updated_at`.
 
-```sql
-CREATE TABLE staff_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  status VARCHAR(20) DEFAULT 'active',
-  invited_at TIMESTAMP,
-  accepted_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(tenant_id, user_id)
-);
-```
+**Follow-ups**
+- Enforce single primary store per tenant in business logic.
+- Add bilingual copy fields and locale toggles per design spec.
 
-### `permissions`
+### `store_domains` *(in schema)*
 
-**Purpose:** Defines all possible granular actions within the system.
+- Fields: `id`, `store_id`, `hostname` (globally unique), `is_primary`, `verified_at`, timestamps.
+- Ensures each domain belongs to a single store; primary flag to be validated in app logic.
 
-```sql
-CREATE TABLE permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100) UNIQUE NOT NULL, -- e.g., 'products:create', 'orders:fulfill'
-  description TEXT,
-  category VARCHAR(50) NOT NULL -- e.g., 'Products', 'Orders'
-);
-```
+**Follow-ups**
+- Add partial unique or constraint to guarantee a single `is_primary = true` per store.
+- Store DNS verification metadata (TXT token, status history).
 
-### `roles`
+### `staff_members` *(missing)*
 
-**Purpose:** A collection of permissions that can be assigned to staff members.
+- Still evaluating dedicated table vs. deriving from users/role assignments; no Prisma model yet.
 
-```sql
-CREATE TABLE roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  is_default BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(tenant_id, name)
-);
-```
+### `permissions` / `roles` / `role_permissions` / `staff_roles`
 
-### `role_permissions`
-
-**Purpose:** Links roles with their granted permissions.
-
-```sql
-CREATE TABLE role_permissions (
-  role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
-  permission_id UUID REFERENCES permissions(id) ON DELETE CASCADE,
-  PRIMARY KEY (role_id, permission_id)
-);
-```
-
-### `staff_roles`
-
-**Purpose:** Assigns roles to staff members.
-
-```sql
-CREATE TABLE staff_roles (
-  staff_id UUID REFERENCES staff_members(id) ON DELETE CASCADE,
-  role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
-  PRIMARY KEY (staff_id, role_id)
-);
-```
+- `roles`, `permissions`, `RolePermission`, and `UserRoleAssignment` exist.
+- Missing taxonomy (`category`), seeding of default permissions/roles, and optional `staff_members` join layer.
 
 ---
 
