@@ -172,6 +172,8 @@ model Product {
   options     ProductOption[]
   tags        ProductTagging[]
   collections ProductCollectionAssignment[]
+  lowStockThreshold Int?      @default(5)
+  lastLowStockAlertAt DateTime?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   deletedAt   DateTime?
@@ -218,6 +220,8 @@ model ProductInventory {
   available  Int      @default(0)
   reserved   Int      @default(0)
   incoming   Int      @default(0)
+  lowStockThreshold Int? @default(5)
+  lastAlertAt DateTime?
   updatedAt  DateTime @updatedAt
 
   @@unique([productId, variantId])

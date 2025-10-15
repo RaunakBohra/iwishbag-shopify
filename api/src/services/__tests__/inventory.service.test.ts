@@ -38,6 +38,16 @@ vi.mock('../../lib/prisma', () => ({
   getPrisma: () => mockPrisma
 }))
 
+vi.mock('@prisma/client', () => ({
+  InventoryAdjustmentReason: {
+    MANUAL: 'MANUAL',
+    SHIPMENT_RECEIVED: 'SHIPMENT_RECEIVED',
+    ORDER_FULFILLED: 'ORDER_FULFILLED',
+    DAMAGE: 'DAMAGE',
+    OTHER: 'OTHER'
+  }
+}))
+
 vi.mock('../usage.service', () => ({
   applyUsageDelta: (...args: any[]) => applyUsageDeltaMock(...args)
 }))
@@ -45,6 +55,10 @@ vi.mock('../usage.service', () => ({
 vi.mock('../catalog-events.service', () => ({
   enqueueCatalogEvent: (...args: any[]) => enqueueCatalogEventMock(...args)
 }))
+
+const inventoryAlertsQueue = {
+  send: vi.fn().mockResolvedValue(undefined)
+}
 
 const env = {
   SESSIONS: {} as any,
@@ -54,7 +68,8 @@ const env = {
   BACKUPS_BUCKET: {} as any,
   DATABASE_URL: '',
   BETTERSTACK_LOGS_TOKEN: 'token',
-  JWT_SECRET: 'secret'
+  JWT_SECRET: 'secret',
+  INVENTORY_ALERTS: inventoryAlertsQueue as any
 } satisfies EnvBindings
 
 beforeEach(() => {
@@ -73,7 +88,13 @@ beforeEach(() => {
     }
   ])
   mockPrisma.productInventory.count.mockResolvedValue(1)
-  mockPrisma.product.findFirst.mockResolvedValue({ id: 'prod-1', inventory: 5 })
+  mockPrisma.product.findFirst.mockResolvedValue({
+    id: 'prod-1',
+    inventory: 5,
+    title: 'Sample Product',
+    lowStockThreshold: 5,
+    tenant: { id: 'tenant-1', name: 'Tenant' }
+  })
   mockPrisma.product.update.mockResolvedValue({})
   mockPrisma.productInventory.upsert.mockResolvedValue({})
   mockPrisma.inventoryAdjustment.create.mockResolvedValue({ id: 'adj-1' })
@@ -81,6 +102,7 @@ beforeEach(() => {
   mockPrisma.inventoryAdjustment.count.mockResolvedValue(1)
   applyUsageDeltaMock.mockResolvedValue({})
   enqueueCatalogEventMock.mockResolvedValue(undefined)
+  inventoryAlertsQueue.send.mockClear()
 })
 
 describe('inventory service', () => {
@@ -112,10 +134,17 @@ describe('inventory service', () => {
       env,
       expect.objectContaining({ event: 'product.updated', productId: 'prod-1' })
     )
+    expect(inventoryAlertsQueue.send).not.toHaveBeenCalled()
   })
 
   it('throws when adjustment would result in negative inventory', async () => {
-    mockPrisma.product.findFirst.mockResolvedValueOnce({ id: 'prod-1', inventory: 1 })
+    mockPrisma.product.findFirst.mockResolvedValueOnce({
+      id: 'prod-1',
+      inventory: 1,
+      title: 'Sample Product',
+      lowStockThreshold: 5,
+      tenant: { id: 'tenant-1', name: 'Tenant' }
+    })
 
     await expect(
       createInventoryAdjustment(env, authUser, {
@@ -126,7 +155,7 @@ describe('inventory service', () => {
   })
 
   it('creates variant adjustment updating variant inventory', async () => {
-    mockPrisma.productVariant.findFirst.mockResolvedValueOnce({ id: 'var-1', inventory: 2 })
+    mockPrisma.productVariant.findFirst.mockResolvedValueOnce({ id: 'var-1', inventory: 2, name: 'Variant' })
 
     await createInventoryAdjustment(env, authUser, {
       productId: 'prod-1',
@@ -148,11 +177,35 @@ describe('inventory service', () => {
         }
       })
     )
+
+    expect(inventoryAlertsQueue.send).toHaveBeenCalled()
   })
 
   it('lists adjustments with pagination', async () => {
     const result = await listInventoryAdjustments(env, authUser, { page: 1 })
     expect(mockPrisma.inventoryAdjustment.findMany).toHaveBeenCalled()
     expect(result.data).toHaveLength(1)
+  })
+
+  it('sends alert when inventory drops below threshold', async () => {
+    mockPrisma.product.findFirst.mockResolvedValueOnce({
+      id: 'prod-1',
+      inventory: 2,
+      title: 'Sample Product',
+      lowStockThreshold: 5,
+      tenant: { id: 'tenant-1', name: 'Tenant' }
+    })
+
+    await createInventoryAdjustment(env, authUser, {
+      productId: 'prod-1',
+      quantity: -1
+    })
+
+    expect(inventoryAlertsQueue.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productId: 'prod-1',
+        threshold: 5
+      })
+    )
   })
 })

@@ -96,6 +96,7 @@ export interface CreateAdjustmentPayload {
   quantity: number
   reason?: InventoryAdjustmentReason
   memo?: string
+  lowStockThreshold?: number
 }
 
 export async function createInventoryAdjustment(env: EnvBindings, authUser: AuthUser, payload: CreateAdjustmentPayload) {
@@ -117,7 +118,15 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
       },
       select: {
         id: true,
-        inventory: true
+        inventory: true,
+        title: true,
+        lowStockThreshold: true,
+        tenant: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     })
 
@@ -125,7 +134,7 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
       throw new HTTPException(404, { message: 'Product not found' })
     }
 
-    let variant: { id: string; inventory: number } | null = null
+    let variant: { id: string; inventory: number; name: string | null } | null = null
 
     if (payload.variantId) {
       variant = await tx.productVariant.findFirst({
@@ -135,13 +144,24 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
         },
         select: {
           id: true,
-          inventory: true
+          inventory: true,
+          name: true
         }
       })
 
       if (!variant) {
         throw new HTTPException(404, { message: 'Variant not found' })
       }
+    }
+
+    let threshold = payload.lowStockThreshold ?? product.lowStockThreshold ?? 5
+
+    if (payload.lowStockThreshold !== undefined) {
+      await tx.product.update({
+        where: { id: product.id },
+        data: { lowStockThreshold: payload.lowStockThreshold }
+      })
+      threshold = payload.lowStockThreshold
     }
 
     if (variant) {
@@ -155,6 +175,8 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
         data: { inventory: updatedInventory }
       })
 
+      variant.inventory = updatedInventory
+
       await tx.productInventory.upsert({
         where: {
           productId_variantId: {
@@ -163,13 +185,15 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
           }
         },
         update: {
-          available: updatedInventory
+          available: updatedInventory,
+          lowStockThreshold: threshold
         },
         create: {
           tenantId,
           productId: payload.productId,
           variantId: variant.id,
-          available: updatedInventory
+          available: updatedInventory,
+          lowStockThreshold: threshold
         }
       })
     } else {
@@ -183,6 +207,8 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
         data: { inventory: updatedInventory }
       })
 
+      product.inventory = updatedInventory
+
       await tx.productInventory.upsert({
         where: {
           productId_variantId: {
@@ -191,12 +217,14 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
           }
         },
         update: {
-          available: updatedInventory
+          available: updatedInventory,
+          lowStockThreshold: threshold
         },
         create: {
           tenantId,
           productId: payload.productId,
-          available: updatedInventory
+          available: updatedInventory,
+          lowStockThreshold: threshold
         }
       })
     }
@@ -215,7 +243,16 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
 
     await applyUsageDelta(tx, tenantId, {})
 
-    return adjustment
+    const available = payload.variantId ? (variant?.inventory ?? 0) : product.inventory
+
+    return {
+      adjustment,
+      threshold,
+      tenant: product.tenant,
+      available,
+      productTitle: product.title,
+      variantName: variant?.name ?? null
+    }
   })
 
   await enqueueCatalogEvent(env, {
@@ -227,7 +264,21 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
     recomputeInventory: true
   })
 
-  return { data: result }
+  if (env.INVENTORY_ALERTS && result.available <= result.threshold) {
+    await env.INVENTORY_ALERTS.send({
+      tenantId,
+      tenantName: result.tenant.name,
+      productId: payload.productId,
+      variantId: payload.variantId ?? null,
+      available: result.available,
+      threshold: result.threshold,
+      productTitle: result.productTitle,
+      variantName: result.variantName,
+      triggeredAt: new Date().toISOString()
+    })
+  }
+
+  return { data: result.adjustment }
 }
 
 export interface ListAdjustmentsParams {

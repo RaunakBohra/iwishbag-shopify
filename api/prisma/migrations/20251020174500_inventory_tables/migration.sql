@@ -10,6 +10,8 @@ CREATE TABLE "ProductInventory" (
     "available" INTEGER NOT NULL DEFAULT 0,
     "reserved" INTEGER NOT NULL DEFAULT 0,
     "incoming" INTEGER NOT NULL DEFAULT 0,
+    "lowStockThreshold" INTEGER,
+    "lastAlertAt" TIMESTAMP(3),
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ProductInventory_pkey" PRIMARY KEY ("id")
