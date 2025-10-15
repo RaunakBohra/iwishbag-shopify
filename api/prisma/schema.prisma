@@ -206,6 +206,110 @@ enum DiscountAllocation {
   PRODUCT
 }
 
+model TenantPayoutMethod {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  provider         String
+  providerMethodId String
+  displayDetails   String
+  isDefault        Boolean  @default(false)
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  payouts          Payout[]
+
+  @@unique([tenantId, providerMethodId])
+  @@index([tenantId, isDefault])
+}
+
+model FinancialTransaction {
+  id                String    @id @default(cuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  orderId           String?
+  order             Order?    @relation(fields: [orderId], references: [id])
+  paymentId         String?
+  payment           Payment?  @relation(fields: [paymentId], references: [id])
+  refundId          String?
+  refund            Refund?   @relation(fields: [refundId], references: [id])
+  type              String
+  status            String?
+  amount            Decimal   @default("0") @db.Decimal(12, 2)
+  currency          String    @default("NPR")
+  originalAmount    Decimal?  @db.Decimal(12, 2)
+  originalCurrency  String?
+  exchangeRate      Decimal?  @db.Decimal(12, 6)
+  provider          String?
+  providerReference String?
+  metadata          Json?
+  occurredAt        DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  Discount          Discount? @relation(fields: [discountId], references: [id])
+  discountId        String?
+
+  @@index([tenantId, occurredAt])
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([refundId])
+}
+
+model TenantBalance {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  currency         String   @default("NPR")
+  availableBalance Decimal  @default("0") @db.Decimal(12, 2)
+  pendingBalance   Decimal  @default("0") @db.Decimal(12, 2)
+  updatedAt        DateTime @updatedAt
+  metadata         Json?
+
+  @@unique([tenantId, currency])
+}
+
+model BalanceTransaction {
+  id                  String                @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                @relation(fields: [tenantId], references: [id])
+  currency            String                @default("NPR")
+  amount              Decimal               @default("0") @db.Decimal(12, 2)
+  type                String
+  sourceOrderId       String?
+  sourceOrder         Order?                @relation(fields: [sourceOrderId], references: [id])
+  sourcePaymentId     String?
+  sourcePayment       Payment?              @relation(fields: [sourcePaymentId], references: [id])
+  sourceRefundId      String?
+  sourceRefund        Refund?               @relation(fields: [sourceRefundId], references: [id])
+  payoutId            String?
+  payout              Payout?               @relation(fields: [payoutId], references: [id])
+  metadata            Json?
+  occurredAt          DateTime              @default(now())
+  GiftCardTransaction GiftCardTransaction[]
+
+  @@index([tenantId, occurredAt])
+}
+
+model Payout {
+  id                  String               @id @default(cuid())
+  tenantId            String
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  amount              Decimal              @default("0") @db.Decimal(12, 2)
+  currency            String               @default("NPR")
+  status              String               @default("requested")
+  provider            String?
+  providerPayoutId    String?
+  payoutMethodId      String?
+  payoutMethod        TenantPayoutMethod?  @relation(fields: [payoutMethodId], references: [id])
+  initiatedAt         DateTime             @default(now())
+  completedAt         DateTime?
+  failedAt            DateTime?
+  failureReason       String?
+  metadata            Json?
+  balanceTransactions BalanceTransaction[]
+
+  @@index([tenantId, status])
+}
+
 model EmailTemplate {
   id        String   @id @default(cuid())
   tenantId  String
@@ -566,28 +670,28 @@ model CartItem {
 }
 
 model Order {
-  id                   String                @id @default(cuid())
+  id                   String                 @id @default(cuid())
   tenantId             String
-  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id])
   orderNumber          String
   customerId           String?
-  customer             Customer?             @relation(fields: [customerId], references: [id])
-  cartId               String?               @unique
-  cart                 Cart?                 @relation("CartOrder", fields: [cartId], references: [id])
-  status               OrderStatus           @default(PENDING)
-  currency             String                @default("NPR")
-  subtotal             Decimal               @default("0") @db.Decimal(10, 2)
-  discountTotal        Decimal               @default("0") @db.Decimal(10, 2)
-  shippingTotal        Decimal               @default("0") @db.Decimal(10, 2)
-  taxTotal             Decimal               @default("0") @db.Decimal(10, 2)
-  total                Decimal               @default("0") @db.Decimal(10, 2)
+  customer             Customer?              @relation(fields: [customerId], references: [id])
+  cartId               String?                @unique
+  cart                 Cart?                  @relation("CartOrder", fields: [cartId], references: [id])
+  status               OrderStatus            @default(PENDING)
+  currency             String                 @default("NPR")
+  subtotal             Decimal                @default("0") @db.Decimal(10, 2)
+  discountTotal        Decimal                @default("0") @db.Decimal(10, 2)
+  shippingTotal        Decimal                @default("0") @db.Decimal(10, 2)
+  taxTotal             Decimal                @default("0") @db.Decimal(10, 2)
+  total                Decimal                @default("0") @db.Decimal(10, 2)
   billingAddress       Json?
   shippingAddress      Json?
   note                 String?
   metadata             Json?
   placedAt             DateTime?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   items                OrderItem[]
   taxLines             OrderTaxLine[]
   shippingLines        OrderShippingLine[]
@@ -598,6 +702,8 @@ model Order {
   shipments            Shipment[]
   discountUsages       DiscountUsage[]
   giftCardTransactions GiftCardTransaction[]
+  FinancialTransaction FinancialTransaction[]
+  BalanceTransaction   BalanceTransaction[]
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId, createdAt])
@@ -671,24 +777,26 @@ model OrderEvent {
 }
 
 model Payment {
-  id                String           @id @default(cuid())
-  tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id])
-  orderId           String
-  order             Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  status            PaymentStatus    @default(PENDING)
-  provider          String
-  providerPaymentId String
-  method            String?
-  amount            Decimal          @default("0") @db.Decimal(10, 2)
-  currency          String           @default("NPR")
-  capturedAmount    Decimal          @default("0") @db.Decimal(10, 2)
-  refundedAmount    Decimal          @default("0") @db.Decimal(10, 2)
-  metadata          Json?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  attempts          PaymentAttempt[]
-  refunds           Refund[]
+  id                   String                 @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id])
+  orderId              String
+  order                Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status               PaymentStatus          @default(PENDING)
+  provider             String
+  providerPaymentId    String
+  method               String?
+  amount               Decimal                @default("0") @db.Decimal(10, 2)
+  currency             String                 @default("NPR")
+  capturedAmount       Decimal                @default("0") @db.Decimal(10, 2)
+  refundedAmount       Decimal                @default("0") @db.Decimal(10, 2)
+  metadata             Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  attempts             PaymentAttempt[]
+  refunds              Refund[]
+  FinancialTransaction FinancialTransaction[]
+  BalanceTransaction   BalanceTransaction[]
 
   @@unique([tenantId, provider, providerPaymentId])
   @@index([orderId])
@@ -708,20 +816,22 @@ model PaymentAttempt {
 }
 
 model Refund {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  orderId   String?
-  order     Order?   @relation(fields: [orderId], references: [id])
-  paymentId String
-  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  amount    Decimal  @default("0") @db.Decimal(10, 2)
-  currency  String   @default("NPR")
-  reason    String?
-  status    String?  @default("pending")
-  metadata  Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String                 @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id])
+  orderId              String?
+  order                Order?                 @relation(fields: [orderId], references: [id])
+  paymentId            String
+  payment              Payment                @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  amount               Decimal                @default("0") @db.Decimal(10, 2)
+  currency             String                 @default("NPR")
+  reason               String?
+  status               String?                @default("pending")
+  metadata             Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  balanceTransactions  BalanceTransaction[]
+  FinancialTransaction FinancialTransaction[]
 
   @@index([tenantId])
   @@index([paymentId])
@@ -777,29 +887,30 @@ model FulfillmentEvent {
 }
 
 model Discount {
-  id                    String              @id @default(cuid())
+  id                    String                 @id @default(cuid())
   tenantId              String
-  tenant                Tenant              @relation(fields: [tenantId], references: [id])
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id])
   title                 String
   code                  String?
-  type                  DiscountType        @default(PERCENTAGE)
-  allocation            DiscountAllocation  @default(ORDER)
-  value                 Decimal             @default("0") @db.Decimal(10, 2)
-  minimumSubtotal       Decimal?            @db.Decimal(10, 2)
-  maximumSubtotal       Decimal?            @db.Decimal(10, 2)
+  type                  DiscountType           @default(PERCENTAGE)
+  allocation            DiscountAllocation     @default(ORDER)
+  value                 Decimal                @default("0") @db.Decimal(10, 2)
+  minimumSubtotal       Decimal?               @db.Decimal(10, 2)
+  maximumSubtotal       Decimal?               @db.Decimal(10, 2)
   startsAt              DateTime
   endsAt                DateTime?
   usageLimit            Int?
   usageLimitPerCustomer Int?
-  usageCount            Int                 @default(0)
-  isStackable           Boolean             @default(false)
-  status                String              @default("draft")
+  usageCount            Int                    @default(0)
+  isStackable           Boolean                @default(false)
+  status                String                 @default("draft")
   metadata              Json?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   rules                 DiscountRule[]
   conditions            DiscountCondition[]
   usages                DiscountUsage[]
+  financialTransactions FinancialTransaction[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -865,16 +976,18 @@ model GiftCard {
 }
 
 model GiftCardTransaction {
-  id         String   @id @default(cuid())
-  giftCardId String
-  giftCard   GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
-  orderId    String?
-  order      Order?   @relation(fields: [orderId], references: [id])
-  type       String
-  amount     Decimal  @default("0") @db.Decimal(10, 2)
-  balance    Decimal  @default("0") @db.Decimal(10, 2)
-  metadata   Json?
-  createdAt  DateTime @default(now())
+  id                   String              @id @default(cuid())
+  giftCardId           String
+  giftCard             GiftCard            @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+  orderId              String?
+  order                Order?              @relation(fields: [orderId], references: [id])
+  type                 String
+  amount               Decimal             @default("0") @db.Decimal(10, 2)
+  balance              Decimal             @default("0") @db.Decimal(10, 2)
+  metadata             Json?
+  createdAt            DateTime            @default(now())
+  balanceTransactionId String?
+  balanceTransaction   BalanceTransaction? @relation(fields: [balanceTransactionId], references: [id])
 
   @@index([giftCardId])
 }
@@ -914,13 +1027,13 @@ model TaxOverride {
 }
 
 model Tenant {
-  id                       String                @id @default(cuid())
+  id                       String                 @id @default(cuid())
   name                     String
-  slug                     String                @unique
-  plan                     PlanTier              @default(FREE)
-  planStatus               String                @default("trial")
+  slug                     String                 @unique
+  plan                     PlanTier               @default(FREE)
+  planStatus               String                 @default("trial")
   trialEndsAt              DateTime?
-  email                    String?               @unique
+  email                    String?                @unique
   phone                    String?
   businessName             String?
   businessType             String?
@@ -928,16 +1041,16 @@ model Tenant {
   vatNumber                String?
   registrationNumber       String?
   paymentProviderAccountId String?
-  maxProducts              Int?                  @default(25)
-  maxOrdersPerMonth        Int?                  @default(50)
-  maxStaff                 Int?                  @default(1)
-  maxStorageGb             Int?                  @default(1)
-  timezone                 String                @default("Asia/Kathmandu")
-  currency                 String                @default("NPR")
-  language                 String                @default("ne")
-  dateFormat               String                @default("YYYY/MM/DD")
-  status                   String                @default("pending")
-  kycStatus                String                @default("pending")
+  maxProducts              Int?                   @default(25)
+  maxOrdersPerMonth        Int?                   @default(50)
+  maxStaff                 Int?                   @default(1)
+  maxStorageGb             Int?                   @default(1)
+  timezone                 String                 @default("Asia/Kathmandu")
+  currency                 String                 @default("NPR")
+  language                 String                 @default("ne")
+  dateFormat               String                 @default("YYYY/MM/DD")
+  status                   String                 @default("pending")
+  kycStatus                String                 @default("pending")
   kycSubmittedAt           DateTime?
   kycApprovedAt            DateTime?
   metadata                 Json?
@@ -946,7 +1059,7 @@ model Tenant {
   usage                    TenantUsage?
   store                    Store?
   settings                 TenantSetting?
-  planReference            SubscriptionPlan?     @relation(fields: [planId], references: [id])
+  planReference            SubscriptionPlan?      @relation(fields: [planId], references: [id])
   invitees                 Invite[]
   products                 Product[]
   collections              ProductCollection[]
@@ -980,10 +1093,15 @@ model Tenant {
   loyaltyTransactions      LoyaltyTransaction[]
   referrals                Referral[]
   auditLogs                AuditLog[]
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
   deletedAt                DateTime?
   CustomerAddress          CustomerAddress[]
+  TenantPayoutMethod       TenantPayoutMethod[]
+  FinancialTransaction     FinancialTransaction[]
+  TenantBalance            TenantBalance[]
+  BalanceTransaction       BalanceTransaction[]
+  Payout                   Payout[]
 
   @@index([planId])
 }

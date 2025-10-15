@@ -304,7 +304,45 @@ CREATE TABLE products (
 
 ### Remaining financial tables *(not yet modelled)*
 
-- `transactions`, `tenant_balances`, `balance_transactions`, `payouts`, payout methods, and integration credentials remain as blueprint tasks and will be introduced in later phases alongside ledger/reconciliation work.
+- `financial_transactions`, `balance_transactions`, `tenant_balances`, `payouts`, and `tenant_payout_methods` now exist in the Prisma schema covering ledger and disbursement tracking.
+- `integrations` (service credential registry) remains outstanding and will be added when provisioning workflows are implemented.
+
+### `financial_transactions` *(in schema)*
+
+- General ledger entries capturing monetary movements tied to orders, payments, or refunds, with provider metadata, currency conversion fields, and occurrence timestamp.
+- Indexed by tenant/time and related entity for reconciliation queries.
+
+**Follow-ups**
+- Standardise `type`/`status` values via enums.
+- Enforce currency conversion logic where `original_amount` is supplied.
+
+### `tenant_balances` *(in schema)*
+
+- Tracks available/pending balance per tenant/currency, updated via application logic when transactions settle.
+
+**Follow-ups**
+- Implement triggers/service logic to keep balances consistent with ledger entries.
+
+### `balance_transactions` *(in schema)*
+
+- Immutable ledger of balance debits/credits referencing orders, payments, refunds, payouts, or gift card adjustments.
+
+**Follow-ups**
+- Add double-entry checks to guarantee ledger integrity.
+
+### `payouts` *(in schema)*
+
+- Represents payout requests to providers with amount, status, provider metadata, and linkage to payout methods and balance transactions.
+
+**Follow-ups**
+- Enforce valid state transitions (requested → processing → completed/failed).
+
+### `tenant_payout_methods` *(in schema)*
+
+- Stores tokens for tenant payout destinations (e.g., bank accounts, wallets) with display details and default flag.
+
+**Follow-ups**
+- Encrypt method tokens and integrate with provider credential rotation.
 
 ### `discounts` *(in schema)*
 
