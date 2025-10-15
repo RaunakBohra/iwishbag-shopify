@@ -35,16 +35,16 @@
   - Tip: copy `api/.env.dev.example` and `api/.env.staging.example` to create the real files, then replace the placeholder URLs before running migrations.
 
 ## 2. Neon RLS & Roles
-- [ ] Generate SQL script from `docs/database/NEON-MULTI-TENANT.md` (table list + policy template).
+- [ ] Generate SQL script from `docs/database/NEON-MULTI-TENANT.md` (table list + policy template). *(See `api/prisma/rls/tenant_isolation.sql` for the canonical version.)*
 - [ ] Execute script against `dev` branch; verify `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` applied to tenant tables.
 - [ ] Create application roles (`app_user`, `app_admin`) and grant privileges.
 - [ ] Add automated test in `api/src/services/__tests__/tenant-isolation.test.ts` to confirm cross-tenant access is blocked.
 - [ ] Commit SQL script under `prisma/rls/` for version control.
 
 **Execution notes**
-- Script skeleton lives in `docs/database/NEON-MULTI-TENANT.md`; parameterise tenant table list (`tenants`, `users`, `roles`, `products`, `product_variants`, etc.) and generate via Node script so future tables inherit policies.
-- Store context helper (`SELECT set_config('app.tenant_id', $1, true);`) in a shared SQL snippet for reuse in provisioning/seed flows.
-- Isolation test outline: seed two tenants, insert catalog data for each, set `set_config` via Prisma `$executeRaw`, and assert that tenant A cannot see tenant B records.
+- `api/prisma/rls/tenant_isolation.sql` enables RLS on all tenant-scoped tables, creates `app.set_tenant/app.clear_tenant`, and applies tenant policies.
+- Application code must call `SELECT app.set_tenant('<tenant-id>');` before Prisma queries (and `app.clear_tenant()` afterwards) to gain access.
+- `api/src/services/__tests__/tenant-isolation.test.ts` verifies isolation when helpers are installed; ensure script is applied before running the test.
 
 ## 3. Seed Data Automation
 - [ ] Author `prisma/seeds/seed.ts` to insert subscription plans, permissions matrix, provinces/districts, and demo tenant.

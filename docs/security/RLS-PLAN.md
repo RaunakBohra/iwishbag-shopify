@@ -1,15 +1,13 @@
 ## RLS Policy Plan
 
-1. Collect tenant-scoped tables via script (`prisma-inspect`).
-2. Generate SQL:
+1. `api/prisma/rls/tenant_isolation.sql` handles discovery of tenant-scoped tables via `information_schema` and applies policies in one go.
+2. The script creates helper functions:
    ```sql
-   ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY;
-   CREATE POLICY tenant_isolation ON ${table}
-     USING (tenant_id = current_setting('app.tenant_id')::uuid)
-     WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+   CREATE SCHEMA IF NOT EXISTS app;
+   CREATE OR REPLACE FUNCTION app.set_tenant(text) RETURNS void ...;
+   CREATE OR REPLACE FUNCTION app.clear_tenant() RETURNS void ...;
    ```
-3. Shared/global tables get either no policies or separate policies (e.g., read-only).
-4. Add helper stored procedure to set tenant context: `SELECT set_config('app.tenant_id', $1, true);`
-5. Testing strategy:
-   - Integration test seeds two tenants, sets context via `$executeRaw` before queries, ensures cross-tenant selects fail.
-   - Use Vitest with Prisma to assert RLS enforcement.
+3. For each table containing `tenantId`, RLS is enabled with `tenantId IS NULL OR tenantId = app.current_tenant()`; `Tenant` and audit logs have dedicated policies.
+4. Apply with `psql $DATABASE_URL -f prisma/rls/tenant_isolation.sql` (run once per environment).
+5. Application must set/clear context per request using the helper functions.
+6. Testing strategy implemented in `api/src/services/__tests__/tenant-isolation.test.ts` (requires script applied beforehand).
