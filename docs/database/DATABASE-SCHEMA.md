@@ -33,9 +33,10 @@
 - Timestamps: `created_at`, `updated_at`
 
 **Gaps vs blueprint**
-- Missing tenant contact & compliance fields (`email`, `phone`, `business_name`, `PAN`, `VAT`, KYC metadata).
-- No plan limits (`max_products`, `max_staff`, etc.), timezone/currency settings, or JSON `settings/metadata`.
-- Needs soft-delete column (`deleted_at`) annotated for filters.
+- Contact & compliance metadata captured (`email`, `phone`, `business_name`, `PAN`, `VAT`, KYC timestamps).
+- Plan limits exist as nullable columns; still need enforcement logic + migration path from `PlanTier` enum to `subscription_plans`.
+- JSON `settings` encapsulated via `tenant_settings` relation; evaluate schema validation + auditing.
+- Soft delete column (`deleted_at`) present; add default scope in Prisma client/helpers.
 - RLS policy pending (see Section 2).
 
 **Indexes / constraints**
@@ -118,6 +119,43 @@
 - `roles`, `permissions`, `RolePermission`, and `UserRoleAssignment` exist.
 - Missing taxonomy (`category`), seeding of default permissions/roles, and optional `staff_members` join layer.
 
+### `menus` *(in schema)*
+
+- Tenant-scoped navigation container with `name`, `handle`, optional `location`, and `position` for ordering.
+- `@@unique([tenant_id, handle])` ensures one handle per tenant; indexed by `(tenant_id, position)` for quick fetch.
+- Relation to `menu_items` with cascading deletes handled at Prisma level.
+
+**Follow-ups**
+- Audit allowed `location` values (primary, footer, etc.) and consider enum.
+- Add revision history or published flag if needed for preview workflows.
+
+### `menu_items` *(in schema)*
+
+- Supports tree structure via self-referencing relation (`parent_id`) with Cascade on delete.
+- Bilingual titles (`title_en`, `title_ne`), optional URL/target metadata, `position`, and visibility flag.
+
+**Follow-ups**
+- Validate `url` vs. `target_id` exclusivity at application layer.
+- Consider `link_type` enum to distinguish between internal/external resources.
+
+### `pages` *(in schema)*
+
+- Tenant-owned CMS pages with bilingual titles, slug (unique per tenant), `PageStatus` enum, metadata, `published_at`, and soft delete.
+- Indexed on `(tenant_id, status)` for filtering drafts vs. published pages.
+
+**Follow-ups**
+- Implement partial index on published pages once migrations begin.
+- Add content versioning / revision table if editorial workflow requires it.
+
+### `page_blocks` *(in schema)*
+
+- Child blocks tied to a page, storing `block_type`, JSON content payload, and ordered by `position`.
+- Cascade delete when parent page is removed.
+
+**Follow-ups**
+- Define schema per `block_type` (hero, rich_text, gallery) and enforce via validation.
+- Add auditing columns (created_by) if multiple editors collaborate.
+
 ---
 
 ## 4. PRODUCT CATALOG TABLES
@@ -145,44 +183,47 @@ CREATE TABLE products (
 
 ## 5. ORDER MANAGEMENT TABLES
 
-### `customers`
+### `customers` *(in schema)*
 
-**Purpose:** Store customers
+- Tenant-scoped record with optional email/phone, profile fields, locale, status, tags, and soft delete tracking.
+- `@@unique([tenant_id, email])` prevents duplicate accounts per tenant/email combination while allowing multiple `NULL` entries.
+- JSON `attributes` reserved for metafields (loyalty IDs, preferences, etc.).
 
-```sql
-CREATE TABLE customers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  email VARCHAR(255),
-  phone VARCHAR(20),
-  first_name VARCHAR(100),
-  last_name VARCHAR(100),
-  -- ... other customer fields
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(tenant_id, email)
-);
-```
+**Follow-ups**
+- Evaluate hashing/anonymisation strategy for PII (per compliance checklist).
+- Emit audit logs on creation/update/deletion.
 
-### `orders`
+### `customer_addresses` *(in schema)*
 
-**Purpose:** Customer orders
+- Linked to both tenant and customer; captures address lines, province/district, default billing/shipping flags, and metadata.
+- Indexed on `(tenant_id, customer_id)` to accelerate address listings.
 
-```sql
-CREATE TABLE orders (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  order_number VARCHAR(50) UNIQUE NOT NULL,
-  customer_id UUID REFERENCES customers(id),
-  total DECIMAL(10,2) NOT NULL,
-  currency VARCHAR(3) DEFAULT 'NPR',
-  payment_status VARCHAR(20) DEFAULT 'pending',
-  fulfillment_status VARCHAR(20) DEFAULT 'unfulfilled',
-  -- ... other order fields
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Normalise provinces/districts once lookup tables are seeded.
+- Enforce single default billing/shipping address via application logic.
+
+### `orders` *(missing)*
+
+- Full order pipeline still to be modelled (see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §4).
+- Requirements: order numbers, monetary totals, status enums, relationships to payments, fulfillments, and events.
+
+### `carts` *(in schema)*
+
+- Represents in-progress checkouts with optional customer reference, money totals, TTL (`expires_at`), JSON attributes, and `CartStatus` enum (`ACTIVE`, `CHECKED_OUT`, `ABANDONED`).
+- Indexed by `(tenant_id, status)` and `(tenant_id, customer_id)` for dashboard + customer views.
+
+**Follow-ups**
+- Background job to mark expired carts as `ABANDONED`.
+- Capture source channel (e.g., web, POS) if needed for analytics.
+
+### `cart_items` *(in schema)*
+
+- Items reference `products` and optional `product_variants`, storing quantity, price, subtotal, and arbitrary attributes.
+- Cascade delete when cart removed; indexed by `cart_id`.
+
+**Follow-ups**
+- Add uniqueness constraint `(cart_id, product_id, variant_id)` to prevent duplicates.
+- Track tax/discount breakdown at line-item level for compliance exports.
 
 ---
 
