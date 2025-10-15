@@ -186,6 +186,7 @@ CREATE TABLE products (
 ### `customers` *(in schema)*
 
 - Tenant-scoped record with optional email/phone, profile fields, locale, status, tags, and soft delete tracking.
+- Relations: `customer_addresses`, `carts`, and `orders`.
 - `@@unique([tenant_id, email])` prevents duplicate accounts per tenant/email combination while allowing multiple `NULL` entries.
 - JSON `attributes` reserved for metafields (loyalty IDs, preferences, etc.).
 
@@ -202,14 +203,58 @@ CREATE TABLE products (
 - Normalise provinces/districts once lookup tables are seeded.
 - Enforce single default billing/shipping address via application logic.
 
-### `orders` *(missing)*
+### `orders` *(in schema)*
 
-- Full order pipeline still to be modelled (see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §4).
-- Requirements: order numbers, monetary totals, status enums, relationships to payments, fulfillments, and events.
+- Tenant-scoped orders with sequential `order_number` (unique per tenant), optional `customer_id` and `cart_id`, and `OrderStatus` enum (`DRAFT`, `PENDING`, `CONFIRMED`, `PARTIALLY_FULFILLED`, `FULFILLED`, `CANCELLED`, `RETURNED`).
+- Money columns (`subtotal`, `discount_total`, `shipping_total`, `tax_total`, `total`) stored as decimals alongside `currency`.
+- Snapshot JSON for `billing_address` and `shipping_address`, optional `note`, `metadata`, and timestamps (`placed_at`, `created_at`, `updated_at`).
+- Relations to line items, taxes, shipping lines, events, and (in later phases) payments/fulfillments.
+
+**Follow-ups**
+- Generate order numbers per tenant (prefix + sequential counter).
+- Enforce derived totals via service-layer helpers or database triggers.
+- Capture audit info (`created_by`) once admin UI is available.
+
+### `order_items` *(in schema)*
+
+- Each item links to optional `product`/`product_variant` snapshot plus canonical `title`, `sku`, `quantity`, unit/subtotal/discount/tax amounts, and metadata.
+- Indexed by `order_id`; cascade deletes when parent order removed.
+
+**Follow-ups**
+- Persist price currency if multi-currency carts allowed.
+- Add JSON for applied discounts/promotion codes per item.
+
+### `order_tax_lines` *(in schema)*
+
+- Stores per-order tax breakdown with `title`, `rate`, `amount`, metadata, and timestamps.
+- Indexed by `order_id`.
+
+**Follow-ups**
+- Expand to capture jurisdiction codes once tax tables are seeded.
+- Enforce positive amounts and rate range validation.
+
+### `order_shipping_lines` *(in schema)*
+
+- Represents shipping charges by carrier/service, amounts, taxes, tracking metadata, and estimated arrival.
+- Indexed by `order_id` for quick retrieval.
+
+**Follow-ups**
+- Add constraint ensuring a single primary shipping line, or move to separate fulfillment stage.
+- Track packaging weight/dimensions for analytics.
+
+### `order_events` *(in schema)*
+
+- Append-only event log capturing lifecycle transitions (`type`, `message`, optional structured `data`, `created_by`).
+- Indexed by `order_id`.
+
+**Follow-ups**
+- Replace free-form `type` string with enum once workflow stabilises.
+- Emit webhook/job triggers on key events (placed, cancelled, fulfilled).
 
 ### `carts` *(in schema)*
 
 - Represents in-progress checkouts with optional customer reference, money totals, TTL (`expires_at`), JSON attributes, and `CartStatus` enum (`ACTIVE`, `CHECKED_OUT`, `ABANDONED`).
+- Linked one-to-one with `orders` via optional `order_id` (unique) so historical carts can be inspected post-checkout.
 - Indexed by `(tenant_id, status)` and `(tenant_id, customer_id)` for dashboard + customer views.
 
 **Follow-ups**
@@ -229,146 +274,37 @@ CREATE TABLE products (
 
 ## 6. PAYMENT & FINANCIAL TABLES
 
-### `integrations`
+### `payments` *(in schema)*
 
-**Purpose:** A generic, scalable table to manage all third-party integrations.
+- Captures tenant/order payment records with provider identifiers, method, status enum (`PaymentStatus`), multi-currency support, captured/refunded totals, and metadata.
+- Unique `(tenant_id, provider, provider_payment_id)` prevents duplicate ingestion; indexed by `order_id`.
+- Relations: payment attempts, refunds (cascade on order delete).
 
-```sql
-CREATE TABLE integrations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  provider VARCHAR(50) NOT NULL,
-  category VARCHAR(50) NOT NULL,
-  is_active BOOLEAN DEFAULT false,
-  management_type VARCHAR(20) DEFAULT 'platform' NOT NULL,
-  credentials_encrypted TEXT,
-  kms_key_arn TEXT,
-  is_verified BOOLEAN DEFAULT false,
-  settings JSONB,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(tenant_id, provider)
-);
-```
+**Follow-ups**
+- Encrypt sensitive provider payloads and add audit timestamps (`authorized_at`, `captured_at`).
+- Wire to reconciliation job to validate captured vs. order totals.
 
-### `transactions`
+### `payment_attempts` *(in schema)*
 
-**Purpose:** Payment transaction log with multi-currency support.
+- Logs gateway retries with status, error codes/messages, metadata, and timestamp.
+- Cascade delete ensures no orphan attempts when a payment is removed.
 
-```sql
-CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
-  amount DECIMAL(12, 2) NOT NULL,
-  currency VARCHAR(3) NOT NULL DEFAULT 'NPR',
-  original_amount DECIMAL(12, 2),
-  original_currency VARCHAR(3),
-  exchange_rate DECIMAL(12, 6),
-  gateway VARCHAR(50) NOT NULL,
-  gateway_transaction_id VARCHAR(255) UNIQUE NOT NULL,
-  type VARCHAR(20) NOT NULL,
-  status VARCHAR(20) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Persist hashed request/response payloads for forensic analysis.
+- Add monitoring-friendly index on `(status)` to detect repeated failures.
 
-### `tenant_balances`
+### `refunds` *(in schema)*
 
-**Purpose:** To maintain a real-time balance of how much money the platform owes each tenant.
+- Stores refunds tied to payments (and optionally orders) with amount, reason, status, and metadata.
+- Indexed by `tenant_id` and `payment_id`; cascades when payment is deleted.
 
-```sql
-CREATE TABLE tenant_balances (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  currency VARCHAR(3) NOT NULL,
-  available_balance DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-  pending_balance DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(tenant_id, currency)
-);
-```
+**Follow-ups**
+- Promote `status` to enum and capture provider refund IDs.
+- Track item-level refund breakdown once returns workflow is modelled.
 
-### `balance_transactions`
+### Remaining financial tables *(not yet modelled)*
 
-**Purpose:** A detailed, immutable ledger of every single credit and debit for a tenant's balance.
-
-```sql
-CREATE TABLE balance_transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  amount DECIMAL(12, 2) NOT NULL,
-  currency VARCHAR(3) NOT NULL,
-  type VARCHAR(50) NOT NULL,
-  source_order_id UUID REFERENCES orders(id),
-  source_payout_id UUID REFERENCES payouts(id),
-  source_refund_id UUID REFERENCES refunds(id),
-  description TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### `payouts`
-
-**Purpose:** A log of payout requests made to the payment provider.
-
-```sql
-CREATE TABLE payouts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  amount DECIMAL(12, 2) NOT NULL,
-  currency VARCHAR(3) NOT NULL,
-  provider_payout_id VARCHAR(255) UNIQUE,
-  destination_method_id UUID REFERENCES tenant_payout_methods(id),
-  status VARCHAR(50) NOT NULL DEFAULT 'requested',
-  initiated_at TIMESTAMP DEFAULT NOW(),
-  completed_at TIMESTAMP,
-  failed_at TIMESTAMP,
-  failure_reason TEXT
-);
-```
-
-### `tenant_payout_methods`
-
-**Purpose:** To store the safe tokens representing a tenant's payout destinations.
-
-```sql
-CREATE TABLE tenant_payout_methods (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  provider VARCHAR(50) NOT NULL,
-  provider_method_id VARCHAR(255) NOT NULL,
-  display_details TEXT NOT NULL,
-  is_default BOOLEAN DEFAULT false,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(tenant_id, provider_method_id)
-);
-```
-
-### `refunds`
-
-**Purpose:** Order refunds
-
-```sql
-CREATE TABLE refunds (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
-  amount DECIMAL(10,2) NOT NULL,
-  currency VARCHAR(3) DEFAULT 'NPR',
-  reason VARCHAR(50),
-  note TEXT,
-  refund_items JSONB NOT NULL,
-  restock BOOLEAN DEFAULT true,
-  status VARCHAR(20) DEFAULT 'pending',
-  transaction_id UUID REFERENCES transactions(id),
-  processed_by UUID REFERENCES users(id),
-  created_at TIMESTAMP DEFAULT NOW(),
-  processed_at TIMESTAMP
-);
-```
+- `transactions`, `tenant_balances`, `balance_transactions`, `payouts`, payout methods, and integration credentials remain as blueprint tasks and will be introduced in later phases alongside ledger/reconciliation work.
 
 ### `discounts`
 
@@ -442,32 +378,32 @@ CREATE TABLE shipping_rates (
 );
 ```
 
-### `fulfillments`
+### `fulfillments` *(in schema)*
 
-**Purpose:** Order fulfillment tracking
+- Tracks execution of shipments per order, storing `FulfillmentStatus`, tracking metadata, shipped/delivered timestamps, and arbitrary metadata.
+- Relations: `fulfillment_items`, `fulfillment_events`; indexed by `order_id`.
 
-```sql
-CREATE TABLE fulfillments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
-  status VARCHAR(20) DEFAULT 'pending',
-  line_items JSONB NOT NULL,
-  tracking_company VARCHAR(100),
-  tracking_number VARCHAR(255),
-  tracking_url TEXT,
-  logistics_provider VARCHAR(50),
-  location_history JSONB DEFAULT '[]',
-  delivered_at TIMESTAMP,
-  delivered_to VARCHAR(255),
-  delivery_photo_url TEXT,
-  delivery_signature_url TEXT,
-  failed_reason TEXT,
-  failed_attempts INT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Add warehouse/source fields and carrier service codes when multi-warehouse support lands.
+- Capture who fulfilled the order (user IDs) for audit purposes.
+
+### `fulfillment_items` *(in schema)*
+
+- Links fulfillments to individual `order_items`, recording quantities and metadata.
+- Cascade deletes with parent fulfillment; indexed by `fulfillment_id`.
+
+**Follow-ups**
+- Enforce quantity constraints (cannot exceed ordered quantity).
+- Include per-item status (picked, packed, backordered) if workflows require.
+
+### `fulfillment_events` *(in schema)*
+
+- Event log for fulfillment lifecycle (picked, handed to carrier, delivered, failed) with optional structured data and actor (`created_by`).
+- Indexed by `fulfillment_id`.
+
+**Follow-ups**
+- Hook events into notification/webhook system.
+- Deduplicate repeated carrier callbacks with idempotency keys.
 
 ---
 
