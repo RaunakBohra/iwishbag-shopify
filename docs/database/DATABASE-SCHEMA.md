@@ -306,32 +306,74 @@ CREATE TABLE products (
 
 - `transactions`, `tenant_balances`, `balance_transactions`, `payouts`, payout methods, and integration credentials remain as blueprint tasks and will be introduced in later phases alongside ledger/reconciliation work.
 
-### `discounts`
+### `discounts` *(in schema)*
 
-**Purpose:** Discount codes & promotions
+- Stores merchant discount campaigns with optional coupon `code`, discount `type` (`PERCENTAGE`, `FIXED_AMOUNT`, `FREE_SHIPPING`), allocation scope (order vs product), value, spend thresholds, timeframe, usage limits, stackability, and metadata.
+- Relations: rules, conditions, and usages; indexed by `(tenant_id, status)` and unique per tenant/code.
 
-```sql
-CREATE TABLE discounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-  code VARCHAR(50) UNIQUE NOT NULL,
-  type VARCHAR(20) NOT NULL,
-  value DECIMAL(10,2) NOT NULL,
-  minimum_purchase_amount DECIMAL(10,2) DEFAULT 0,
-  maximum_discount_amount DECIMAL(10,2),
-  usage_limit INT,
-  usage_limit_per_customer INT DEFAULT 1,
-  usage_count INT DEFAULT 0,
-  starts_at TIMESTAMP NOT NULL,
-  ends_at TIMESTAMP,
-  applies_to VARCHAR(20) DEFAULT 'all',
-  applies_to_products UUID[],
-  applies_to_collections UUID[],
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
+**Follow-ups**
+- Enforce max redemptions per customer/order in service layer.
+- Add analytics on redemption performance once usage events instrumented.
+
+### `discount_rules` *(in schema)*
+
+- Captures rule modifiers per discount (e.g., applies once per order, additional metadata for future rule types).
+- Cascade deletes with parent discount and indexed by `discount_id`.
+
+**Follow-ups**
+- Extend structure to capture minimum item counts or tiered discounts.
+
+### `discount_conditions` *(in schema)*
+
+- Represents polymorphic conditions (collections, products, customer segments) via `type`, optional operator, and JSON values array.
+- Indexed by `discount_id` for quick evaluation.
+
+**Follow-ups**
+- Replace free-form `type`/`operator` with enums when condition taxonomy stabilises.
+- Validate referenced IDs exist before activation.
+
+### `discount_usages` *(in schema)*
+
+- Logs each redemption with optional `customer_id`, `order_id`, and metadata; timestamps default to `used_at`.
+- Indexed by discount, customer, and order for reporting.
+
+**Follow-ups**
+- Prevent multiple redemptions per order when `appliesOnce` is false via unique constraints/logic.
+
+### `gift_cards` *(in schema)*
+
+- Tenant gift cards with unique `code`, balances, currency, optional customer owner, expiry, metadata, and active flag.
+- Relations: transactions; balances updated atomically in service layer.
+
+**Follow-ups**
+- Hash codes in storage or encrypt when compliance requires.
+- Add issuance/revocation audit logging.
+
+### `gift_card_transactions` *(in schema)*
+
+- Ledger of gift card changes (issue, redeem, refund) capturing order references, amount deltas, resulting balance, and metadata.
+- Indexed by `gift_card_id`.
+
+**Follow-ups**
+- Formalise `type` as enum and include actor identifiers.
+
+### `tax_rates` *(in schema)*
+
+- Stores tenant tax definitions with rate, scope (country/province/district), default flag, and metadata; indexed by `(tenant_id, is_default)`.
+- Relations: `tax_overrides` to attach rate to specific resources.
+
+**Follow-ups**
+- Prevent more than one default per tenant via SQL constraint.
+- Seed Nepal 13% VAT default via seeds.
+
+### `tax_overrides` *(in schema)*
+
+- Overrides linking a `tax_rate` to a specific resource level (product, collection, shipping profile) via `level` and `reference_id` fields.
+- Indexed by tenant and rate for efficient lookups.
+
+**Follow-ups**
+- Enforce referential integrity once reference tables (collections, profiles) are modelled.
+- Consider composite uniqueness `(tenant_id, level, reference_id)`.
 
 ---
 

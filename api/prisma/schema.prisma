@@ -91,6 +91,17 @@ enum FulfillmentStatus {
   CANCELLED
 }
 
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+enum DiscountAllocation {
+  ORDER
+  PRODUCT
+}
+
 model SubscriptionPlan {
   id                String   @id @default(cuid())
   name              String
@@ -254,6 +265,8 @@ model Customer {
   addresses       CustomerAddress[]
   carts           Cart[]
   orders          Order[]
+  discountUsages  DiscountUsage[]
+  giftCards       GiftCard[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -328,35 +341,37 @@ model CartItem {
 }
 
 model Order {
-  id              String              @id @default(cuid())
-  tenantId        String
-  tenant          Tenant              @relation(fields: [tenantId], references: [id])
-  orderNumber     String
-  customerId      String?
-  customer        Customer?           @relation(fields: [customerId], references: [id])
-  cartId          String?             @unique
-  cart            Cart?               @relation("CartOrder", fields: [cartId], references: [id])
-  status          OrderStatus         @default(PENDING)
-  currency        String              @default("NPR")
-  subtotal        Decimal             @default("0") @db.Decimal(10, 2)
-  discountTotal   Decimal             @default("0") @db.Decimal(10, 2)
-  shippingTotal   Decimal             @default("0") @db.Decimal(10, 2)
-  taxTotal        Decimal             @default("0") @db.Decimal(10, 2)
-  total           Decimal             @default("0") @db.Decimal(10, 2)
-  billingAddress  Json?
-  shippingAddress Json?
-  note            String?
-  metadata        Json?
-  placedAt        DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  items           OrderItem[]
-  taxLines        OrderTaxLine[]
-  shippingLines   OrderShippingLine[]
-  events          OrderEvent[]
-  payments        Payment[]
-  fulfillments    Fulfillment[]
-  refunds         Refund[]
+  id                   String                @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  orderNumber          String
+  customerId           String?
+  customer             Customer?             @relation(fields: [customerId], references: [id])
+  cartId               String?               @unique
+  cart                 Cart?                 @relation("CartOrder", fields: [cartId], references: [id])
+  status               OrderStatus           @default(PENDING)
+  currency             String                @default("NPR")
+  subtotal             Decimal               @default("0") @db.Decimal(10, 2)
+  discountTotal        Decimal               @default("0") @db.Decimal(10, 2)
+  shippingTotal        Decimal               @default("0") @db.Decimal(10, 2)
+  taxTotal             Decimal               @default("0") @db.Decimal(10, 2)
+  total                Decimal               @default("0") @db.Decimal(10, 2)
+  billingAddress       Json?
+  shippingAddress      Json?
+  note                 String?
+  metadata             Json?
+  placedAt             DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  items                OrderItem[]
+  taxLines             OrderTaxLine[]
+  shippingLines        OrderShippingLine[]
+  events               OrderEvent[]
+  payments             Payment[]
+  fulfillments         Fulfillment[]
+  refunds              Refund[]
+  discountUsages       DiscountUsage[]
+  giftCardTransactions GiftCardTransaction[]
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId, createdAt])
@@ -534,6 +549,143 @@ model FulfillmentEvent {
   @@index([fulfillmentId])
 }
 
+model Discount {
+  id                    String              @id @default(cuid())
+  tenantId              String
+  tenant                Tenant              @relation(fields: [tenantId], references: [id])
+  title                 String
+  code                  String?
+  type                  DiscountType        @default(PERCENTAGE)
+  allocation            DiscountAllocation  @default(ORDER)
+  value                 Decimal             @default("0") @db.Decimal(10, 2)
+  minimumSubtotal       Decimal?            @db.Decimal(10, 2)
+  maximumSubtotal       Decimal?            @db.Decimal(10, 2)
+  startsAt              DateTime
+  endsAt                DateTime?
+  usageLimit            Int?
+  usageLimitPerCustomer Int?
+  usageCount            Int                 @default(0)
+  isStackable           Boolean             @default(false)
+  status                String              @default("draft")
+  metadata              Json?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  rules                 DiscountRule[]
+  conditions            DiscountCondition[]
+  usages                DiscountUsage[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+}
+
+model DiscountRule {
+  id          String   @id @default(cuid())
+  discountId  String
+  discount    Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  appliesOnce Boolean  @default(false)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([discountId])
+}
+
+model DiscountCondition {
+  id         String   @id @default(cuid())
+  discountId String
+  discount   Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  type       String
+  operator   String?
+  values     Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([discountId])
+}
+
+model DiscountUsage {
+  id         String    @id @default(cuid())
+  discountId String
+  discount   Discount  @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  orderId    String?
+  order      Order?    @relation(fields: [orderId], references: [id])
+  usedAt     DateTime  @default(now())
+  metadata   Json?
+
+  @@index([discountId])
+  @@index([customerId])
+  @@index([orderId])
+}
+
+model GiftCard {
+  id             String                @id @default(cuid())
+  tenantId       String
+  tenant         Tenant                @relation(fields: [tenantId], references: [id])
+  code           String                @unique
+  initialBalance Decimal               @default("0") @db.Decimal(10, 2)
+  currentBalance Decimal               @default("0") @db.Decimal(10, 2)
+  currency       String                @default("NPR")
+  isActive       Boolean               @default(true)
+  expiresAt      DateTime?
+  customerId     String?
+  customer       Customer?             @relation(fields: [customerId], references: [id])
+  metadata       Json?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  transactions   GiftCardTransaction[]
+}
+
+model GiftCardTransaction {
+  id         String   @id @default(cuid())
+  giftCardId String
+  giftCard   GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id])
+  type       String
+  amount     Decimal  @default("0") @db.Decimal(10, 2)
+  balance    Decimal  @default("0") @db.Decimal(10, 2)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([giftCardId])
+}
+
+model TaxRate {
+  id        String        @id @default(cuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  name      String
+  rate      Decimal       @db.Decimal(6, 4)
+  country   String        @default("NP")
+  province  String?
+  district  String?
+  isDefault Boolean       @default(false)
+  metadata  Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  overrides TaxOverride[]
+
+  @@index([tenantId, isDefault])
+}
+
+model TaxOverride {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  taxRateId   String
+  taxRate     TaxRate  @relation(fields: [taxRateId], references: [id], onDelete: Cascade)
+  level       String
+  referenceId String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([taxRateId])
+}
+
 model Tenant {
   id                       String                @id @default(cuid())
   name                     String
@@ -584,6 +736,10 @@ model Tenant {
   payments                 Payment[]
   refunds                  Refund[]
   fulfillments             Fulfillment[]
+  discounts                Discount[]
+  giftCards                GiftCard[]
+  taxRates                 TaxRate[]
+  taxOverrides             TaxOverride[]
   auditLogs                AuditLog[]
   createdAt                DateTime              @default(now())
   updatedAt                DateTime              @updatedAt
