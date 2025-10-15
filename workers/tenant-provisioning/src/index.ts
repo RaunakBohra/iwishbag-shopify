@@ -1,7 +1,5 @@
-import { PrismaClient, Prisma } from '@prisma/client'
-import type { Queue, QueueBatch, QueueMessage } from '@cloudflare/workers-types'
+import { PrismaClient, Prisma, ProductStatus } from '@prisma/client'
 import { z } from 'zod'
-import { logToBetterStack } from '@api/lib/logging'
 
 const provisioningMessageSchema = z.object({
   tenantId: z.string(),
@@ -16,13 +14,59 @@ const provisioningMessageSchema = z.object({
 
 type TenantProvisioningMessage = z.infer<typeof provisioningMessageSchema>
 
+type QueueMessage<T = unknown> = {
+  body: T
+  ack: () => Promise<void> | void
+  retry: () => Promise<void> | void
+  attempts?: number
+}
+
+interface QueueBatch<T = unknown> {
+  messages: QueueMessage<T>[]
+}
+
+type WorkerQueue = {
+  send: (message: unknown) => Promise<void> | void
+}
+
 interface WorkerEnv {
   DATABASE_URL: string
   BETTERSTACK_LOGS_TOKEN?: string
   BETTERSTACK_LOGS_ENDPOINT?: string
-  TENANT_PROVISIONING_DLQ?: Queue
+  TENANT_PROVISIONING_DLQ?: WorkerQueue
   POSTHOG_API_KEY?: string
   POSTHOG_HOST?: string
+  ALLOW_DEMO_SEED?: string
+}
+
+interface LogPayload {
+  level: 'info' | 'warn' | 'error'
+  event: string
+  [key: string]: unknown
+}
+
+async function logToBetterStack(env: WorkerEnv, payload: LogPayload) {
+  if (!env.BETTERSTACK_LOGS_TOKEN) {
+    return
+  }
+
+  const endpoint = env.BETTERSTACK_LOGS_ENDPOINT ?? 'https://in.logs.betterstack.com'
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.BETTERSTACK_LOGS_TOKEN}`
+      },
+      body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        ...payload
+      })
+    })
+  } catch (error) {
+    console.error('Failed to forward log to Better Stack', error)
+  }
 }
 
 const MAX_ATTEMPTS = 5
@@ -143,7 +187,21 @@ async function seedFeatureFlags(tx: Prisma.TransactionClient, tenantId: string) 
   )
 }
 
-async function seedDemoProducts(tx: Prisma.TransactionClient, tenantId: string) {
+async function seedDemoProducts(
+  tx: Prisma.TransactionClient,
+  env: WorkerEnv,
+  message: TenantProvisioningMessage
+) {
+  if (env.ALLOW_DEMO_SEED !== '1') {
+    await logToBetterStack(env, {
+      level: 'info',
+      event: 'tenant.provisioning.demo_products.skipped',
+      tenantId: message.tenantId,
+      reason: 'ALLOW_DEMO_SEED disabled'
+    })
+    return
+  }
+
   const [productTable] = await tx.$queryRaw<{ exists: boolean }[]>`
     SELECT EXISTS (
       SELECT 1
@@ -155,13 +213,19 @@ async function seedDemoProducts(tx: Prisma.TransactionClient, tenantId: string) 
   `
 
   if (!productTable?.exists) {
+    await logToBetterStack(env, {
+      level: 'warn',
+      event: 'tenant.provisioning.demo_products.skipped',
+      tenantId: message.tenantId,
+      reason: 'product table unavailable'
+    })
     return
   }
 
   const existing = await tx.product.findFirst({
     where: {
-      tenantId,
-      title: 'Demo Product'
+      tenantId: message.tenantId,
+      title: 'Demo Hoodie'
     }
   })
 
@@ -169,12 +233,73 @@ async function seedDemoProducts(tx: Prisma.TransactionClient, tenantId: string) 
     return
   }
 
-  await tx.product.create({
+  const price = new Prisma.Decimal('49.99')
+
+  const product = await tx.product.create({
     data: {
-      tenantId,
-      title: 'Demo Product',
-      price: '0'
+      tenantId: message.tenantId,
+      title: 'Demo Hoodie',
+      description: 'Sample product created during onboarding so you can explore catalog management.',
+      sku: 'DEMO-HOODIE',
+      price,
+      inventory: 25,
+      status: ProductStatus.ACTIVE
     }
+  })
+
+  const variant = await tx.productVariant.create({
+    data: {
+      productId: product.id,
+      name: 'Default',
+      sku: 'DEMO-HOODIE-DEFAULT',
+      price,
+      inventory: 25
+    }
+  })
+
+  await tx.productImage.create({
+    data: {
+      productId: product.id,
+      url: 'https://dummyimage.com/800x800/2563eb/ffffff&text=Demo+Product',
+      alt: 'Demo hoodie preview',
+      position: 0
+    }
+  })
+
+  await tx.productInventory.create({
+    data: {
+      tenantId: message.tenantId,
+      productId: product.id,
+      variantId: variant.id,
+      available: 25
+    }
+  })
+
+  await tx.tenantUsage.update({
+    where: { tenantId: message.tenantId },
+    data: {
+      products: { increment: 1 },
+      variants: { increment: 1 },
+      images: { increment: 1 }
+    }
+  }).catch(() => undefined)
+
+  await tx.auditLog.create({
+    data: {
+      tenantId: message.tenantId,
+      action: 'tenant.provisioning.demo_products.seeded',
+      metadata: {
+        productId: product.id,
+        variantId: variant.id
+      }
+    }
+  })
+
+  await logToBetterStack(env, {
+    level: 'info',
+    event: 'tenant.provisioning.demo_products.seeded',
+    tenantId: message.tenantId,
+    productId: product.id
   })
 }
 
@@ -188,6 +313,12 @@ async function seedNotifications(
     event: 'tenant.provisioning.notifications.seeded',
     tenantId: message.tenantId,
     adminUserId: message.adminUserId
+  })
+
+  await capturePosthog(env, 'tenant_provisioning_notifications_seeded', {
+    tenantId: message.tenantId,
+    adminUserId: message.adminUserId,
+    trigger: message.trigger
   })
 
   await tx.auditLog.create({
@@ -234,7 +365,7 @@ async function processProvisioningTasks(
               await seedIntegrations(tx, message.tenantId)
               break
             case 'seed-demo-products':
-              await seedDemoProducts(tx, message.tenantId)
+              await seedDemoProducts(tx, env, message)
               break
             case 'seed-notifications':
               await seedNotifications(tx, env, message)

@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import worker from '../../../../workers/tenant-provisioning/src/index'
-import type { QueueMessage, QueueBatch } from '@cloudflare/workers-types'
 import type { EnvBindings } from '../../types'
 import { provisionTenant } from '../tenant-provisioning.service'
 
@@ -18,6 +17,17 @@ const prisma = new PrismaClient({
   datasourceUrl
 })
 
+type TestQueueMessage<T = unknown> = {
+  body: T
+  ack: () => Promise<void> | void
+  retry: () => Promise<void> | void
+  attempts?: number
+}
+
+interface TestQueueBatch<T = unknown> {
+  messages: TestQueueMessage<T>[]
+}
+
 const baseEnv: EnvBindings = {
   DATABASE_URL: datasourceUrl,
   BETTERSTACK_LOGS_TOKEN: '',
@@ -25,7 +35,8 @@ const baseEnv: EnvBindings = {
   RATE_LIMIT: {} as KVNamespace,
   PRODUCT_MEDIA_BUCKET: {} as R2Bucket,
   PROOF_OF_DELIVERY_BUCKET: {} as R2Bucket,
-  BACKUPS_BUCKET: {} as R2Bucket
+  BACKUPS_BUCKET: {} as R2Bucket,
+  JWT_SECRET: 'test-secret'
 }
 
 describe.sequential('tenant provisioning worker', () => {
@@ -111,6 +122,21 @@ describe.sequential('tenant provisioning worker', () => {
           await tx.tenantProvisioningRun.deleteMany({ where: { tenantId } })
           await tx.integration.deleteMany({ where: { tenantId } })
           await tx.tenantFeatureFlag.deleteMany({ where: { tenantId } })
+          await tx.productImage.deleteMany({
+            where: {
+              product: {
+                tenantId
+              }
+            }
+          })
+          await tx.productInventory.deleteMany({ where: { tenantId } })
+          await tx.productVariant.deleteMany({
+            where: {
+              product: {
+                tenantId
+              }
+            }
+          })
           await tx.product.deleteMany({ where: { tenantId } })
           await tx.store.deleteMany({ where: { tenantId } })
           await tx.userRoleAssignment.deleteMany({ where: { user: { tenantId } } })
@@ -156,21 +182,21 @@ describe.sequential('tenant provisioning worker', () => {
     }
 
     const retry = vi.fn(async () => {})
-
-    const message: QueueMessage = {
+    const message: TestQueueMessage = {
       body: payload,
       ack: vi.fn(async () => {}),
       retry,
       attempts: 0
     }
 
-    const batch: QueueBatch = {
+    const batch: TestQueueBatch = {
       messages: [message]
     }
 
     await worker.queue(batch, {
       DATABASE_URL: datasourceUrl,
       BETTERSTACK_LOGS_TOKEN: '',
+      ALLOW_DEMO_SEED: '1',
       TENANT_PROVISIONING_DLQ: { send: vi.fn(async () => {}) }
     } as any)
 
@@ -219,10 +245,31 @@ describe.sequential('tenant provisioning worker', () => {
       const demoProduct = await prisma.product.findFirst({
         where: {
           tenantId: result.tenantId,
-          title: 'Demo Product'
+          title: 'Demo Hoodie'
         }
       })
       expect(demoProduct).not.toBeNull()
+
+      if (demoProduct) {
+        expect(demoProduct.status).toBe('ACTIVE')
+
+        const variant = await prisma.productVariant.findFirst({
+          where: { productId: demoProduct.id }
+        })
+        expect(variant).not.toBeNull()
+
+        if (variant) {
+          const inventory = await prisma.productInventory.findUnique({
+            where: {
+              productId_variantId: {
+                productId: demoProduct.id,
+                variantId: variant.id
+              }
+            }
+          })
+          expect(inventory?.available).toBeGreaterThan(0)
+        }
+      }
     }
 
     const auditLog = await prisma.auditLog.findFirst({

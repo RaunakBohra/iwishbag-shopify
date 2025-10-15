@@ -49,7 +49,7 @@
   - Apply `app.set_tenant(tenantId)` before each task; `app.clear_tenant()` in `finally`.
 - **Tasks**  
   1. `seed-theme`: assign default theme, copy configuration overrides.  
-  2. `seed-demo-products`: optional (only when `env.ALLOW_DEMO_SEED === '1'`).  
+  2. `seed-demo-products`: optional (only when `env.ALLOW_DEMO_SEED === '1'`; creates demo catalog entries).  
   3. `seed-integrations`: create placeholder records for logistics/payment providers.  
   4. `seed-notifications`: enqueue welcome email/SMS.  
   5. Future: `seed-geography` (once Province/District in schema) for shipping zones.

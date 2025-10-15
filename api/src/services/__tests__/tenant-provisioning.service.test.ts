@@ -23,7 +23,8 @@ const testEnv: EnvBindings = {
   RATE_LIMIT: {} as KVNamespace,
   PRODUCT_MEDIA_BUCKET: {} as R2Bucket,
   PROOF_OF_DELIVERY_BUCKET: {} as R2Bucket,
-  BACKUPS_BUCKET: {} as R2Bucket
+  BACKUPS_BUCKET: {} as R2Bucket,
+  JWT_SECRET: 'test-secret'
 }
 
 describe.sequential('provisionTenant', () => {
