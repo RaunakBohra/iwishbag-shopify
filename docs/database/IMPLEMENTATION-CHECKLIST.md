@@ -56,6 +56,8 @@
 - Break seed steps into reusable modules (`seedPlans`, `seedPermissions`, `seedGeography`, `seedDemoTenant`) and gate by environment (avoid demo tenant in production).
 - Source authoritative province/district list from `docs/database/DATA-MODELS.md` appendix; keep CSV in `prisma/seeds/data/`.
 - Expose `SEED_DRY_RUN=1` flag to log intended changes without executing writes for review.
+- Proposed structure: `prisma/seeds/index.ts` orchestrates modules (`plans.ts`, `permissions.ts`, `geography.ts`, `themes.ts`, `feature-flags.ts`, `demo-tenant.ts`).
+- Each module exports `run(prisma, env)` returning summary counts; orchestrator handles transactions where needed.
 
 ## 4. Tenant Provisioning Worker
 - [ ] Design transaction in `api/src/services/tenant.service.ts` to create tenant + default entities atomically.
