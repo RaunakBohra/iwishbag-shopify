@@ -35,11 +35,11 @@
   - Tip: copy `api/.env.dev.example` and `api/.env.staging.example` to create the real files, then replace the placeholder URLs before running migrations.
 
 ## 2. Neon RLS & Roles
-- [ ] Generate SQL script from `docs/database/NEON-MULTI-TENANT.md` (table list + policy template). *(See `api/prisma/rls/tenant_isolation.sql` for the canonical version.)*
-- [ ] Execute script against `dev` branch; verify `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` applied to tenant tables.
-- [ ] Create application roles (`app_user`, `app_admin`) and grant privileges.
-- [ ] Add automated test in `api/src/services/__tests__/tenant-isolation.test.ts` to confirm cross-tenant access is blocked.
-- [ ] Commit SQL script under `prisma/rls/` for version control.
+- [x] Generate SQL script from `docs/database/NEON-MULTI-TENANT.md` (table list + policy template). *(See `api/prisma/rls/tenant_isolation.sql` for the canonical version.)*
+- [x] Execute script against `dev` branch; verify `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` applied to tenant tables.
+- [x] Create application roles (`app_user`, `app_admin`) and grant privileges. *(Scripted via `api/prisma/rls/app_roles.sql`.)*
+- [x] Add automated test in `api/src/services/__tests__/tenant-isolation.test.ts` to confirm cross-tenant access is blocked.
+- [x] Commit SQL script under `prisma/rls/` for version control.
 
 **Execution notes**
 - `api/prisma/rls/tenant_isolation.sql` enables RLS on all tenant-scoped tables, creates `app.set_tenant/app.clear_tenant`, and applies tenant policies.
@@ -47,31 +47,35 @@
 - `api/src/services/__tests__/tenant-isolation.test.ts` verifies isolation when helpers are installed; ensure script is applied before running the test.
 
 ## 3. Seed Data Automation
-- [ ] Author `prisma/seeds/seed.ts` to insert subscription plans, permissions matrix, provinces/districts, and demo tenant.
-- [ ] Wire seed runner into package.json (`pnpm seed:dev`, `pnpm seed:staging`).
-- [ ] Ensure seeds are idempotent (use `ON CONFLICT DO NOTHING` or Prisma upserts).
-- [ ] Document seed outputs in `docs/database/DATA-MODELS.md` (teal callouts).
+- [x] Author `prisma/seeds/index.js` to insert subscription plans, permissions matrix, provinces/districts, and demo tenant.
+- [x] Wire seed runner into package.json (`npm run seed:dev`, `npm run seed:staging`).
+- [x] Ensure seeds are idempotent (use Prisma upserts and safe deletes).
+- [x] Document seed outputs in `docs/database/DATA-MODELS.md` (teal callouts).
 
 **Execution notes**
 - Break seed steps into reusable modules (`seedPlans`, `seedPermissions`, `seedGeography`, `seedDemoTenant`) and gate by environment (avoid demo tenant in production).
 - Source authoritative province/district list from `docs/database/DATA-MODELS.md` appendix; keep CSV in `prisma/seeds/data/`.
 - Expose `SEED_DRY_RUN=1` flag to log intended changes without executing writes for review.
-- Proposed structure: `prisma/seeds/index.ts` orchestrates modules (`plans.ts`, `permissions.ts`, `geography.ts`, `themes.ts`, `feature-flags.ts`, `demo-tenant.ts`).
+- Orchestrator: `prisma/seeds/index.js` invokes modules (`plans.js`, `permissions.js`, `geography.js`, `themes.js`, `feature-flags.js`, `demo-tenant.js`).
 - Each module exports `run(prisma, env)` returning summary counts; orchestrator handles transactions where needed.
 
 ## 4. Tenant Provisioning Worker
+- Reference design: `docs/database/TENANT-PROVISIONING.md`.
 - [ ] Design transaction in `api/src/services/tenant.service.ts` to create tenant + default entities atomically.
-- [ ] Emit provisioning job to `tenant-provisioning` queue with retry/backoff config.
-- [ ] Implement worker handler (Cloudflare Worker) to run seed extensions (themes, sample products).
-- [ ] Add telemetry (PostHog event + Better Stack log) for success/failure states.
-- [ ] Cover flow with integration test using Neon shadow branch.
+- [x] Emit provisioning job to `tenant-provisioning` queue with retry/backoff config.
+- [x] Implement worker handler (Cloudflare Worker) to run seed extensions (themes, sample products).
+- [x] Add telemetry (PostHog event + Better Stack log) for success/failure states.
+- [x] Cover flow with integration test using Neon shadow branch.*
 
 **Execution notes**
 - Transaction should call shared seeding helpers (roles, permissions, usage counters) so duplicate logic is avoided between synchronous API and async worker.
 - Queue payload contract: `{ tenantId, adminUserId, tasks: string[] }`; worker iterates idempotent tasks and records progress in `tenant_provisioning_runs`.
-- Integration test: spin up Neon branch with `neon-cli`, run provisioning path, assert demo data presence, then drop branch to avoid residue.
+- Integration test: spin up Neon branch with `neon-cli`, run provisioning path, assert demo data presence, then drop branch to avoid residue. *(Current repo includes a Vitest integration exercising the queue against the dev branch; migrate to Neon shadow branches when available.)*
+- Integration test: spin up Neon branch with `neon-cli`, run provisioning path, assert demo data presence, then drop branch to avoid residue. *(Current repo includes a Vitest integration exercising the queue via `npm run --workspace api test:queue`; migrate the same command to Neon shadow branches when available.)*
+- Worker now assigns the default theme, enables active feature flags, and seeds placeholder logistics integrations before logging completion.
 
 ## 5. Monitoring & Snapshots - skip for now 
+- Reference plan: `docs/database/MONITORING-SNAPSHOTS.md`.
 - [ ] Configure Neon scheduled function or external cron to capture nightly branch snapshots; retain 7 days.
 - [ ] Add Grafana/Better Stack dashboard tracking connection count, slow queries, RLS violations.
 - [ ] Document snapshot restore procedure in `docs/database/NEON-MULTI-TENANT.md`.

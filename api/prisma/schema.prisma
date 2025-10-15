@@ -74,6 +74,13 @@ enum OrderStatus {
   RETURNED
 }
 
+enum ProvisioningStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum PaymentStatus {
   PENDING
   AUTHORIZED
@@ -1177,6 +1184,8 @@ model Tenant {
   balanceTransactions      BalanceTransaction[]
   payouts                  Payout[]
   auditLogs                AuditLog[]
+  provisioningRun          TenantProvisioningRun?
+  onboardingProgress       TenantOnboarding?
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
   deletedAt                DateTime?
@@ -1471,6 +1480,29 @@ model TenantUsage {
   updatedAt   DateTime  @updatedAt
 }
 
+model TenantProvisioningRun {
+  id          String              @id @default(cuid())
+  tenantId    String              @unique
+  tenant      Tenant              @relation(fields: [tenantId], references: [id])
+  status      ProvisioningStatus  @default(PENDING)
+  tasks       Json?
+  attempts    Int                 @default(0)
+  lastError   String?
+  startedAt   DateTime            @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime            @updatedAt
+}
+
+model TenantOnboarding {
+  tenantId    String  @id
+  tenant      Tenant  @relation(fields: [tenantId], references: [id])
+  currentStep Int     @default(1)
+  completed   Boolean @default(false)
+  steps       Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model AuditLog {
   id        String   @id @default(cuid())
   tenantId  String?
@@ -1494,5 +1526,6 @@ model Integration {
   metadata    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
   @@unique([tenantId, provider])
 }

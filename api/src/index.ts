@@ -17,6 +17,7 @@ import productTagRoutes from './routes/product-tags'
 import productCollectionRoutes from './routes/product-collections'
 import storefrontProductRoutes from './routes/storefront-products'
 import inventoryRoutes from './routes/inventory'
+import onboardingRoutes from './routes/onboarding'
 
 const app = new Hono<AppEnv>()
 
@@ -49,6 +50,9 @@ app.use('*', async (c, next) => {
 
 app.onError(async (err, c) => {
   const status = err instanceof HTTPException ? err.status : 500
+  if (!(err instanceof HTTPException)) {
+    console.error('Unhandled application error', err)
+  }
   await logToBetterStack(c.env, {
     level: 'error',
     event: 'request.error',
@@ -86,5 +90,6 @@ app.route('/v1/product-tags', productTagRoutes)
 app.route('/v1/product-collections', productCollectionRoutes)
 app.route('/public/v1/storefront', storefrontProductRoutes)
 app.route('/v1/inventory', inventoryRoutes)
+app.route('/v1/onboarding', onboardingRoutes)
 
 export default app

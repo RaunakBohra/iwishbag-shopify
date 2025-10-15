@@ -1,6 +1,6 @@
 # Merchant Onboarding Implementation Guide
 
-Complete implementation guide for the merchant onboarding process after registration.
+Complete implementation guide for the merchant onboarding process after registration. Track delivery tasks in `docs/frontend/IMPLEMENTATION-CHECKLIST.md` (§1).
 
 ---
 
@@ -18,6 +18,15 @@ Complete implementation guide for the merchant onboarding process after registra
 ---
 
 ## Overview
+
+### API Endpoints
+
+The onboarding wizard persists progress via the Store API:
+
+- `GET /v1/onboarding` — returns `{ tenantId, currentStep, completed, steps }` for the authenticated tenant. The handler creates a `TenantOnboarding` row on first access.
+- `POST /v1/onboarding` — accepts `{ step: number, data?: object, completed?: boolean }` to merge step data and advance progress. Setting `completed: true` marks the wizard finished.
+
+Underlying data lives in the `TenantOnboarding` table (`tenant_id`, `current_step`, `completed`, `steps JSONB`).
 
 ### Onboarding Flow
 

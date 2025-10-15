@@ -15,6 +15,11 @@ const quickLinks = [
     title: 'Alerts & Incidents',
     description: 'Review escalations piped from Better Stack, PagerDuty, and Sentry.',
     href: '/alerts'
+  },
+  {
+    title: 'Merchant Onboarding',
+    description: 'Guide new merchants through store setup. Progress persists via the Store API.',
+    href: '/onboarding'
   }
 ]
 
