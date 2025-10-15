@@ -206,6 +206,79 @@ enum DiscountAllocation {
   PRODUCT
 }
 
+model FeatureFlag {
+  id          String              @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?             @relation(fields: [tenantId], references: [id])
+  key         String
+  description String?
+  strategy    Json?
+  isActive    Boolean             @default(true)
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  tenantFlags TenantFeatureFlag[]
+
+  @@unique([tenantId, key])
+}
+
+model TenantFeatureFlag {
+  id        String      @id @default(cuid())
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  flagId    String
+  flag      FeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  value     Boolean     @default(true)
+  rollout   Json?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([tenantId, flagId])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  key       String
+  value     Json?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+}
+
+model BackgroundJob {
+  id                   String                 @id @default(cuid())
+  tenantId             String?
+  tenant               Tenant?                @relation(fields: [tenantId], references: [id])
+  type                 String
+  payload              Json?
+  status               String                 @default("pending")
+  runAt                DateTime               @default(now())
+  attempts             Int                    @default(0)
+  lastError            String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  BackgroundJobFailure BackgroundJobFailure[]
+
+  @@index([tenantId, status])
+  @@index([runAt])
+}
+
+model BackgroundJobFailure {
+  id         String        @id @default(cuid())
+  jobId      String
+  job        BackgroundJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  error      String
+  metadata   Json?
+  occurredAt DateTime      @default(now())
+  Tenant     Tenant?       @relation(fields: [tenantId], references: [id])
+  tenantId   String?
+}
+
 model TenantPayoutMethod {
   id               String   @id @default(cuid())
   tenantId         String
@@ -670,40 +743,40 @@ model CartItem {
 }
 
 model Order {
-  id                   String                 @id @default(cuid())
-  tenantId             String
-  tenant               Tenant                 @relation(fields: [tenantId], references: [id])
-  orderNumber          String
-  customerId           String?
-  customer             Customer?              @relation(fields: [customerId], references: [id])
-  cartId               String?                @unique
-  cart                 Cart?                  @relation("CartOrder", fields: [cartId], references: [id])
-  status               OrderStatus            @default(PENDING)
-  currency             String                 @default("NPR")
-  subtotal             Decimal                @default("0") @db.Decimal(10, 2)
-  discountTotal        Decimal                @default("0") @db.Decimal(10, 2)
-  shippingTotal        Decimal                @default("0") @db.Decimal(10, 2)
-  taxTotal             Decimal                @default("0") @db.Decimal(10, 2)
-  total                Decimal                @default("0") @db.Decimal(10, 2)
-  billingAddress       Json?
-  shippingAddress      Json?
-  note                 String?
-  metadata             Json?
-  placedAt             DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  items                OrderItem[]
-  taxLines             OrderTaxLine[]
-  shippingLines        OrderShippingLine[]
-  events               OrderEvent[]
-  payments             Payment[]
-  fulfillments         Fulfillment[]
-  refunds              Refund[]
-  shipments            Shipment[]
-  discountUsages       DiscountUsage[]
-  giftCardTransactions GiftCardTransaction[]
-  FinancialTransaction FinancialTransaction[]
-  BalanceTransaction   BalanceTransaction[]
+  id                    String                 @id @default(cuid())
+  tenantId              String
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id])
+  orderNumber           String
+  customerId            String?
+  customer              Customer?              @relation(fields: [customerId], references: [id])
+  cartId                String?                @unique
+  cart                  Cart?                  @relation("CartOrder", fields: [cartId], references: [id])
+  status                OrderStatus            @default(PENDING)
+  currency              String                 @default("NPR")
+  subtotal              Decimal                @default("0") @db.Decimal(10, 2)
+  discountTotal         Decimal                @default("0") @db.Decimal(10, 2)
+  shippingTotal         Decimal                @default("0") @db.Decimal(10, 2)
+  taxTotal              Decimal                @default("0") @db.Decimal(10, 2)
+  total                 Decimal                @default("0") @db.Decimal(10, 2)
+  billingAddress        Json?
+  shippingAddress       Json?
+  note                  String?
+  metadata              Json?
+  placedAt              DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  items                 OrderItem[]
+  taxLines              OrderTaxLine[]
+  shippingLines         OrderShippingLine[]
+  events                OrderEvent[]
+  payments              Payment[]
+  fulfillments          Fulfillment[]
+  refunds               Refund[]
+  shipments             Shipment[]
+  discountUsages        DiscountUsage[]
+  giftCardTransactions  GiftCardTransaction[]
+  financialTransactions FinancialTransaction[]
+  balanceTransactions   BalanceTransaction[]
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId, createdAt])
@@ -1058,7 +1131,7 @@ model Tenant {
   subscription             TenantSubscription?
   usage                    TenantUsage?
   store                    Store?
-  settings                 TenantSetting?
+  settingsRecord           TenantSetting?
   planReference            SubscriptionPlan?      @relation(fields: [planId], references: [id])
   invitees                 Invite[]
   products                 Product[]
@@ -1085,6 +1158,13 @@ model Tenant {
   shippingRates            ShippingRate[]
   shippingProviders        ShippingProvider[]
   shipments                Shipment[]
+  featureFlags             FeatureFlag[]
+  tenantFeatureFlags       TenantFeatureFlag[]
+  settingRecords           Setting[]
+  backgroundJobs           BackgroundJob[]
+  backgroundJobFailures    BackgroundJobFailure[]
+  integrations             Integration[]
+  tenantPayoutMethods      TenantPayoutMethod[]
   emailTemplates           EmailTemplate[]
   smsTemplates             SmsTemplate[]
   pageViews                PageView[]
@@ -1092,16 +1172,15 @@ model Tenant {
   loyaltyPrograms          LoyaltyProgram[]
   loyaltyTransactions      LoyaltyTransaction[]
   referrals                Referral[]
+  financialTransactions    FinancialTransaction[]
+  tenantBalances           TenantBalance[]
+  balanceTransactions      BalanceTransaction[]
+  payouts                  Payout[]
   auditLogs                AuditLog[]
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
   deletedAt                DateTime?
   CustomerAddress          CustomerAddress[]
-  TenantPayoutMethod       TenantPayoutMethod[]
-  FinancialTransaction     FinancialTransaction[]
-  TenantBalance            TenantBalance[]
-  BalanceTransaction       BalanceTransaction[]
-  Payout                   Payout[]
 
   @@index([planId])
 }
@@ -1401,4 +1480,10 @@ model AuditLog {
   action    String
   metadata  Json
   createdAt DateTime @default(now())
+}
+
+model Integration {
+  id       String  @id @default(cuid())
+  Tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  tenantId String?
 }
