@@ -12,14 +12,20 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "test": "vitest"
+    "test": "vitest",
+    "seed": "node prisma/seeds/index.js",
+    "seed:dev": "node prisma/seeds/index.js dev",
+    "seed:staging": "node prisma/seeds/index.js staging",
+    "seed:prod": "node prisma/seeds/index.js prod"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.2.1",
     "@prisma/client": "^5.19.1",
     "@prisma/extension-accelerate": "^1.2.1",
-    "meilisearch": "^0.40.0",
+    "@prisma/adapter-neon": "^5.19.1",
+    "@neondatabase/serverless": "^0.10.4",
     "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
     "hono": "^4.4.7",
     "jose": "^5.3.0",
     "zod": "^3.23.8"
@@ -31,6 +37,9 @@
     "prisma": "^5.19.1",
     "typescript": "^5.6.3",
     "vitest": "^1.6.0",
-    "wrangler": "^3.80.1"
+    "wrangler": "^4.43.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seeds/index.js"
   }
 }

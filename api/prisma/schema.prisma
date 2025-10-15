@@ -275,8 +275,8 @@ model BackgroundJobFailure {
   error      String
   metadata   Json?
   occurredAt DateTime      @default(now())
-  Tenant     Tenant?       @relation(fields: [tenantId], references: [id])
   tenantId   String?
+  tenant     Tenant?       @relation(fields: [tenantId], references: [id])
 }
 
 model TenantPayoutMethod {
@@ -1160,7 +1160,7 @@ model Tenant {
   shipments                Shipment[]
   featureFlags             FeatureFlag[]
   tenantFeatureFlags       TenantFeatureFlag[]
-  settingRecords           Setting[]
+  configurationSettings    Setting[]
   backgroundJobs           BackgroundJob[]
   backgroundJobFailures    BackgroundJobFailure[]
   integrations             Integration[]
@@ -1483,7 +1483,16 @@ model AuditLog {
 }
 
 model Integration {
-  id       String  @id @default(cuid())
-  Tenant   Tenant? @relation(fields: [tenantId], references: [id])
-  tenantId String?
+  id          String   @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  provider    String
+  category    String?
+  status      String   @default("inactive")
+  config      Json?
+  credentials Json?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([tenantId, provider])
 }
