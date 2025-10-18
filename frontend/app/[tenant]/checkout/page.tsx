@@ -17,6 +17,7 @@ interface FormState {
   district: string
   postalCode: string
   shippingMethod: 'standard' | 'express'
+  paymentMethod: 'cod' | 'card'
 }
 
 const DEFAULT_PROVINCE = PROVINCES[0]
@@ -32,7 +33,8 @@ const INITIAL_FORM: FormState = {
   province: DEFAULT_PROVINCE.code,
   district: DEFAULT_DISTRICT.code,
   postalCode: '',
-  shippingMethod: 'standard'
+  shippingMethod: 'standard',
+  paymentMethod: 'cod'
 }
 
 const SHIPPING_OPTIONS: Record<FormState['shippingMethod'], { id: string; label: string; amount: number }> = {
@@ -126,7 +128,10 @@ export default function CheckoutPage() {
         phone: form.phone,
         shippingAddress: payloadAddress,
         billingAddress: payloadAddress,
-        shippingMethod: payloadShippingMethod
+        shippingMethod: payloadShippingMethod,
+        metadata: {
+          paymentMethod: form.paymentMethod
+        }
       })
 
       setSession(result)
@@ -201,6 +206,30 @@ export default function CheckoutPage() {
                 placeholder="980-0000000"
                 style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
               />
+            </label>
+          </section>
+          <section style={{ display: 'grid', gap: '0.75rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Payment</h2>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="cod"
+                checked={form.paymentMethod === 'cod'}
+                onChange={handleChange('paymentMethod')}
+              />
+              Cash on delivery
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', color: '#94a3b8' }}>
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="card"
+                checked={form.paymentMethod === 'card'}
+                onChange={handleChange('paymentMethod')}
+                disabled
+              />
+              Card (coming soon)
             </label>
           </section>
           <section style={{ display: 'grid', gap: '0.75rem' }}>

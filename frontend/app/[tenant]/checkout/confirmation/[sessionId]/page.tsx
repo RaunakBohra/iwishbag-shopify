@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import type { CheckoutSessionResource } from '../../../../../lib/cart-client'
-import { fetchCheckoutSession, readLastCheckoutSessionId } from '../../../../../lib/cart-client'
+import {
+  fetchCheckoutSession,
+  confirmCheckoutSession,
+  submitCheckoutSession,
+  readLastCheckoutSessionId
+} from '../../../../../lib/cart-client'
 
 const POLL_INTERVAL_MS = 5000
 
@@ -23,6 +28,7 @@ export default function CheckoutConfirmationPage() {
   const [session, setSession] = useState<CheckoutSessionResource | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [polling, setPolling] = useState(false)
+  const [processing, setProcessing] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -112,6 +118,31 @@ export default function CheckoutConfirmationPage() {
     return null
   }
 
+  const paymentMethod = (session?.metadata as Record<string, unknown> | null | undefined)?.paymentMethod
+
+  const handleCompletePayment = async () => {
+    if (!tenantSlug || !sessionId) return
+    setProcessing(true)
+    setError(null)
+    try {
+      let updatedSession = session
+      if (!updatedSession || (updatedSession.status !== 'CONFIRMED' && updatedSession.status !== 'SUBMITTED')) {
+        updatedSession = await confirmCheckoutSession(tenantSlug, sessionId)
+        setSession(updatedSession)
+      }
+
+      if (updatedSession.status !== 'SUBMITTED') {
+        await submitCheckoutSession(tenantSlug, sessionId, typeof paymentMethod === 'string' ? paymentMethod : 'cod')
+        const refreshed = await fetchCheckoutSession(tenantSlug, sessionId)
+        setSession(refreshed)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to complete payment')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   return (
     <div style={{ maxWidth: '900px', margin: '2rem auto', padding: '1.5rem' }}>
       <button
@@ -136,6 +167,9 @@ export default function CheckoutConfirmationPage() {
         <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
           <section style={{ background: '#f8fafc', borderRadius: '1.5rem', padding: '1.5rem', display: 'grid', gap: '0.75rem' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Order summary</h2>
+            {typeof paymentMethod === 'string' ? (
+              <p style={{ fontSize: '0.9rem', color: '#475569' }}>Payment method: {paymentMethod === 'cod' ? 'Cash on delivery' : paymentMethod}</p>
+            ) : null}
             <ul style={{ display: 'grid', gap: '0.75rem' }}>
               {session.cart.items.map((item) => (
                 <li key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
@@ -229,6 +263,24 @@ export default function CheckoutConfirmationPage() {
               >
                 Go back to checkout
               </button>
+              {session && session.status !== 'SUBMITTED' ? (
+                <button
+                  type="button"
+                  onClick={handleCompletePayment}
+                  disabled={processing}
+                  style={{
+                    border: 'none',
+                    borderRadius: '999px',
+                    padding: '0.85rem 1rem',
+                    background: processing ? '#94a3b8' : '#16a34a',
+                    color: '#fff',
+                    fontWeight: 600,
+                    cursor: processing ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {processing ? 'Processing…' : 'Complete payment'}
+                </button>
+              ) : null}
             </div>
           </section>
         </div>

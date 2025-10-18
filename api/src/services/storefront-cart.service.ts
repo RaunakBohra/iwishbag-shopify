@@ -12,7 +12,12 @@ import {
 } from './cart.service'
 import type { CartResource } from './cart.service'
 import type { CheckoutSessionResource } from './checkout.service'
-import { createCheckoutSession, getCheckoutSession } from './checkout.service'
+import {
+  createCheckoutSession,
+  getCheckoutSession,
+  confirmCheckoutSession,
+  submitCheckoutSession
+} from './checkout.service'
 
 interface EnsureSessionResult {
   token: string
@@ -184,4 +189,54 @@ export async function getStorefrontCheckoutSession(
   }
 
   return session
+}
+
+export async function confirmStorefrontCheckout(
+  env: EnvBindings,
+  tenantSlug: string,
+  sessionToken: string,
+  sessionId: string
+): Promise<CheckoutSessionResource> {
+  const tenantId = await resolveTenantId(env, tenantSlug)
+  const cart = await getCartBySession(env, tenantId, sessionToken)
+  const authUser: AuthUser = {
+    tenantId,
+    userId: `storefront-${tenantId}`,
+    email: 'checkout@storefront.local',
+    role: 'OWNER'
+  }
+
+  const session = await confirmCheckoutSession(env, authUser, sessionId)
+  if (session.cart.id !== cart.id) {
+    throw new HTTPException(403, { message: 'Checkout session does not belong to this cart' })
+  }
+  return session
+}
+
+export async function submitStorefrontCheckout(
+  env: EnvBindings,
+  tenantSlug: string,
+  sessionToken: string,
+  sessionId: string,
+  paymentMethod?: string | null
+): Promise<{ orderId: string | null; checkoutSessionId: string }> {
+  const tenantId = await resolveTenantId(env, tenantSlug)
+  const cart = await getCartBySession(env, tenantId, sessionToken)
+  const authUser: AuthUser = {
+    tenantId,
+    userId: `storefront-${tenantId}`,
+    email: 'checkout@storefront.local',
+    role: 'OWNER'
+  }
+
+  const result = await submitCheckoutSession(env, authUser, sessionId, {
+    paymentMethod: paymentMethod ?? undefined
+  })
+
+  const session = await getCheckoutSession(env, authUser, sessionId)
+  if (session.cart.id !== cart.id) {
+    throw new HTTPException(403, { message: 'Checkout session does not belong to this cart' })
+  }
+
+  return result
 }

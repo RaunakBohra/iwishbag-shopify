@@ -281,3 +281,27 @@ export async function fetchCheckoutSession(tenant: string, sessionId: string): P
   persistLastCheckoutSessionId(result.data.id)
   return result.data
 }
+
+export async function confirmCheckoutSession(tenant: string, sessionId: string): Promise<CheckoutSessionResource> {
+  const result = await request<CheckoutResponse>(tenant, `/cart/checkout/${sessionId}/confirm`, {
+    method: 'POST'
+  })
+  persistToken(result.signedToken)
+  persistCartCache(result.data.cart)
+  persistLastCheckoutSessionId(result.data.id)
+  return result.data
+}
+
+export async function submitCheckoutSession(tenant: string, sessionId: string, paymentMethod?: string | null): Promise<{ orderId: string | null; checkoutSessionId: string }> {
+  const result = await request<{ data: { orderId: string | null; checkoutSessionId: string }; token: string; signedToken?: string }>(
+    tenant,
+    `/cart/checkout/${sessionId}/submit`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ paymentMethod })
+    }
+  )
+  persistToken(result.signedToken)
+  persistLastCheckoutSessionId(result.data.checkoutSessionId)
+  return result.data
+}

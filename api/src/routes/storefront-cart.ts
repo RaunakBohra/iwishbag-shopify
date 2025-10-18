@@ -12,7 +12,9 @@ import {
   removeItemForStorefront,
   clearStorefrontCart,
   beginStorefrontCheckout,
-  getStorefrontCheckoutSession
+  getStorefrontCheckoutSession,
+  confirmStorefrontCheckout,
+  submitStorefrontCheckout
 } from '../services/storefront-cart.service'
 
 const cartRoutes = new Hono<AppEnv>()
@@ -44,6 +46,10 @@ const checkoutSchema = z.object({
     .optional()
     .nullable(),
   metadata: z.record(z.unknown()).optional().nullable()
+})
+
+const submitCheckoutSchema = z.object({
+  paymentMethod: z.string().min(1).optional().nullable()
 })
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30
@@ -193,6 +199,31 @@ cartRoutes.get('/:tenant/cart/checkout/:sessionId', async (c) => {
   const signedToken = await setSessionCookie(c, ensuredToken)
 
   return c.json({ data: session, token: ensuredToken, signedToken })
+})
+
+cartRoutes.post('/:tenant/cart/checkout/:sessionId/confirm', async (c) => {
+  const tenantSlug = c.req.param('tenant')
+  const sessionId = c.req.param('sessionId')
+  const token = await getSessionToken(c)
+  const { token: ensuredToken } = await ensureStorefrontCartSession(c.env, tenantSlug, token)
+
+  const session = await confirmStorefrontCheckout(c.env, tenantSlug, ensuredToken, sessionId)
+  const signedToken = await setSessionCookie(c, ensuredToken)
+
+  return c.json({ data: session, token: ensuredToken, signedToken })
+})
+
+cartRoutes.post('/:tenant/cart/checkout/:sessionId/submit', zValidator('json', submitCheckoutSchema), async (c) => {
+  const tenantSlug = c.req.param('tenant')
+  const sessionId = c.req.param('sessionId')
+  const token = await getSessionToken(c)
+  const payload = c.req.valid('json')
+  const { token: ensuredToken } = await ensureStorefrontCartSession(c.env, tenantSlug, token)
+
+  const result = await submitStorefrontCheckout(c.env, tenantSlug, ensuredToken, sessionId, payload.paymentMethod ?? null)
+  const signedToken = await setSessionCookie(c, ensuredToken)
+
+  return c.json({ data: result, token: ensuredToken, signedToken })
 })
 
 export default cartRoutes
