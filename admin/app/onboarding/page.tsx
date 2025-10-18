@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ProgressTracker } from '../../components/onboarding/ProgressTracker'
 import {
   StoreDetailsStep,
@@ -8,11 +8,13 @@ import {
   ShippingSetupStep,
   FirstProductStep,
   ThemeSelectionStep,
-  GoLiveStep
+  GoLiveStep,
+  OnboardingStepStyles
 } from '../../components/onboarding/steps'
+import { capture, initPosthog } from '../../lib/posthog'
+import { api } from '../../lib/api-client'
 
 const TOTAL_STEPS = 6
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '')
 
 interface StatusResponse {
   tenantId: string
@@ -45,36 +47,33 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState<boolean>(true)
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const lastTrackedStep = useRef<number | null>(null)
+  const completionTracked = useRef<boolean>(false)
+
+  useEffect(() => {
+    initPosthog()
+  }, [])
 
   const fetchStatus = useCallback(async () => {
-    if (!API_BASE) {
-      setError('NEXT_PUBLIC_API_URL is not set.')
-      setLoading(false)
-      return
-    }
-
     setLoading(true)
     setError(null)
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : undefined
-      const response = await fetch(`${API_BASE}/v1/onboarding`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        credentials: 'include'
-      })
-
-      if (!response.ok) {
-        throw new Error(await response.text())
-      }
-
-      const body = (await response.json()) as { data: StatusResponse }
+      const body = await api.get<{ data: StatusResponse }>('/v1/onboarding')
       setStatus(body.data)
       setStepsData((body.data.steps ?? {}) as Record<string, Record<string, unknown>>)
+      if (body.data.completed && !completionTracked.current) {
+        capture('onboarding_completed', {
+          tenantId: body.data.tenantId,
+          completedAt: new Date().toISOString()
+        })
+        completionTracked.current = true
+      }
     } catch (err) {
       console.error(err)
-      setError('Unable to load onboarding status. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage.includes('Session expired')
+        ? 'Your session has expired. Redirecting to login...'
+        : 'Unable to load onboarding status. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -83,6 +82,22 @@ export default function OnboardingPage() {
   useEffect(() => {
     fetchStatus()
   }, [fetchStatus])
+
+  useEffect(() => {
+    if (!status || status.completed) {
+      return
+    }
+
+    if (lastTrackedStep.current === status.currentStep) {
+      return
+    }
+
+    capture('onboarding_step_viewed', {
+      tenantId: status.tenantId,
+      step: status.currentStep
+    })
+    lastTrackedStep.current = status.currentStep
+  }, [status])
 
   const stepsForTracker = useMemo(() => {
     if (!status) {
@@ -118,43 +133,49 @@ export default function OnboardingPage() {
 
   const handleStepSubmit = useCallback(
     async (data: Record<string, unknown>) => {
-      if (!API_BASE) return
-
       setSubmitting(true)
       setError(null)
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : undefined
         const payload = {
           step: currentStep,
           data,
           completed: data.completed === true
         }
 
-        const response = await fetch(`${API_BASE}/v1/onboarding`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          credentials: 'include',
-          body: JSON.stringify(payload)
-        })
-
-        if (!response.ok) {
-          throw new Error(await response.text())
-        }
-
-        const body = (await response.json()) as { data: StatusResponse }
+        const body = await api.post<{ data: StatusResponse }>('/v1/onboarding', payload)
         setStatus(body.data)
         setStepsData((body.data.steps ?? {}) as Record<string, Record<string, unknown>>)
+
+        capture('onboarding_step_saved', {
+          tenantId: body.data.tenantId,
+          step: payload.step,
+          completed: payload.completed === true
+        })
+
+        if (payload.completed === true && !completionTracked.current) {
+          capture('onboarding_completed', {
+            tenantId: body.data.tenantId,
+            completedAt: new Date().toISOString()
+          })
+          completionTracked.current = true
+        } else if (body.data.completed && !completionTracked.current) {
+          capture('onboarding_completed', {
+            tenantId: body.data.tenantId,
+            completedAt: new Date().toISOString()
+          })
+          completionTracked.current = true
+        }
       } catch (err) {
         console.error(err)
-        setError('Unable to save progress. Please try again.')
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        setError(errorMessage.includes('Session expired')
+          ? 'Your session has expired. Redirecting to login...'
+          : 'Unable to save progress. Please try again.')
       } finally {
         setSubmitting(false)
       }
     },
-    [API_BASE, currentStep]
+    [currentStep]
   )
 
   const handleBack = useCallback(() => {
@@ -172,17 +193,10 @@ export default function OnboardingPage() {
     })
   }, [])
 
-  if (!API_BASE) {
-    return (
-      <main className="onboarding-container">
-        <p className="error">Set NEXT_PUBLIC_API_URL to use the onboarding wizard.</p>
-      </main>
-    )
-  }
-
   if (loading) {
     return (
       <main className="onboarding-container">
+        <OnboardingStepStyles />
         <p>Loading onboarding progress…</p>
       </main>
     )
@@ -191,6 +205,7 @@ export default function OnboardingPage() {
   if (status?.completed) {
     return (
       <main className="onboarding-container">
+        <OnboardingStepStyles />
         <section className="completion">
           <h1>🎉 Store onboarding complete</h1>
           <p>Your store is ready. You can revisit the wizard anytime to review your settings.</p>
@@ -202,6 +217,7 @@ export default function OnboardingPage() {
   if (!StepComponent) {
     return (
       <main className="onboarding-container">
+        <OnboardingStepStyles />
         <p className="error">Unknown onboarding step.</p>
       </main>
     )
@@ -211,6 +227,7 @@ export default function OnboardingPage() {
 
   return (
     <main className="onboarding-container">
+      <OnboardingStepStyles />
       <header className="onboarding-header">
         <h1>Merchant onboarding</h1>
         <p>Complete the steps below to launch your store.</p>
@@ -231,37 +248,36 @@ export default function OnboardingPage() {
 
       <style jsx>{`
         .onboarding-container {
-          max-width: 56rem;
+          max-width: 60rem;
           margin: 0 auto;
           padding: 3rem 1.5rem 4rem;
           display: grid;
-          gap: 2rem;
+          gap: 2.5rem;
         }
         .onboarding-header h1 {
           font-size: 2.25rem;
           margin-bottom: 0.5rem;
+          color: #f8fafc;
         }
         .onboarding-header p {
-          color: #6b7280;
+          color: #94a3b8;
           font-size: 1.05rem;
         }
         .onboarding-step {
-          background: #ffffff;
-          border: 1px solid #e4e4e7;
-          border-radius: 1rem;
-          padding: 2rem;
-          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
         }
         .error {
-          color: #dc2626;
+          color: #f97316;
           font-weight: 500;
         }
         .completion {
           text-align: center;
           padding: 4rem 2rem;
-          background: #ecfdf5;
+          background: rgba(13, 148, 136, 0.12);
           border-radius: 1rem;
-          border: 1px solid #bbf7d0;
+          border: 1px solid rgba(94, 234, 212, 0.4);
         }
         .completion h1 {
           font-size: 2rem;
