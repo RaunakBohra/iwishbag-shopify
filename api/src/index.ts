@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { HTTPException } from 'hono/http-exception'
+import { cors } from 'hono/cors'
 import { logToBetterStack } from './lib/logging'
 import type { AppEnv } from './types'
 import authRoutes from './routes/auth'
@@ -18,8 +19,19 @@ import productCollectionRoutes from './routes/product-collections'
 import storefrontProductRoutes from './routes/storefront-products'
 import inventoryRoutes from './routes/inventory'
 import onboardingRoutes from './routes/onboarding'
+import checkoutRoutes from './routes/checkout'
+import storefrontCartRoutes from './routes/storefront-cart'
+import cartRoutes from './routes/cart'
 
 const app = new Hono<AppEnv>()
+
+// CORS middleware - must be before auth checks
+app.use('*', cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+}))
 
 async function writeAccessLog(c: Context<AppEnv>, durationMs: number) {
   try {
@@ -91,5 +103,8 @@ app.route('/v1/product-collections', productCollectionRoutes)
 app.route('/public/v1/storefront', storefrontProductRoutes)
 app.route('/v1/inventory', inventoryRoutes)
 app.route('/v1/onboarding', onboardingRoutes)
+app.route('/v1/checkout', checkoutRoutes)
+app.route('/public/v1/storefront', storefrontCartRoutes)
+app.route('/v1/cart', cartRoutes)
 
 export default app

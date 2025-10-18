@@ -1,7 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose'
 import type { EnvBindings, AuthUser } from '../types'
 
-const ACCESS_TOKEN_TTL_SECONDS = 60 * 15 // 15 minutes
+// Use longer TTL in development for better DX (1 hour vs 15 min in production)
+const ACCESS_TOKEN_TTL_SECONDS = process.env.NODE_ENV === 'production' ? 60 * 15 : 60 * 60
 
 export interface AccessTokenPayload {
   sub: string
