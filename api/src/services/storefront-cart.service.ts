@@ -2,6 +2,9 @@ import { HTTPException } from 'hono/http-exception'
 import { Prisma } from '@prisma/client'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
+import { logToBetterStack } from '../lib/logging'
+import { capturePosthogEvent } from '../lib/posthog'
+import { assertRateLimit } from '../lib/rate-limit'
 import {
   addItemToCart,
   clearCart,
@@ -163,6 +166,37 @@ export async function beginStorefrontCheckout(
     metadata: (input.metadata ?? null) as Prisma.InputJsonValue | null
   })
 
+  await logToBetterStack(env, {
+    level: 'info',
+    event: 'storefront.checkout.started',
+    tenantId,
+    tenantSlug,
+    checkoutSessionId: session.id,
+    cartId: cart.id,
+    currency: session.currency,
+    cartTotal: cart.total,
+    itemCount: cart.items.length,
+    emailProvided: Boolean(input.email),
+    hasShippingAddress: Boolean(input.shippingAddress)
+  })
+
+  await capturePosthogEvent(
+    env,
+    'storefront_checkout_started',
+    {
+      tenantId,
+      tenantSlug,
+      checkoutSessionId: session.id,
+      cartId: cart.id,
+      total: session.total,
+      currency: session.currency,
+      itemCount: cart.items.length,
+      emailProvided: Boolean(input.email),
+      hasShippingAddress: Boolean(input.shippingAddress)
+    },
+    { distinctId: session.id }
+  )
+
   return session
 }
 
@@ -199,6 +233,7 @@ export async function confirmStorefrontCheckout(
 ): Promise<CheckoutSessionResource> {
   const tenantId = await resolveTenantId(env, tenantSlug)
   const cart = await getCartBySession(env, tenantId, sessionToken)
+  await assertRateLimit(env, `checkout:confirm:${tenantId}:${sessionId}`, 5, 60)
   const authUser: AuthUser = {
     tenantId,
     userId: `storefront-${tenantId}`,
@@ -210,6 +245,48 @@ export async function confirmStorefrontCheckout(
   if (session.cart.id !== cart.id) {
     throw new HTTPException(403, { message: 'Checkout session does not belong to this cart' })
   }
+
+  if (session.status === 'CONFIRMED') {
+    await getPrisma(env).auditLog.create({
+      data: {
+        tenantId,
+        action: 'storefront.checkout.confirmed',
+        metadata: {
+          checkoutSessionId: session.id,
+          cartId: cart.id,
+          tenantSlug,
+          channel: 'storefront'
+        }
+      }
+    })
+  }
+
+  await logToBetterStack(env, {
+    level: 'info',
+    event: 'storefront.checkout.confirmed',
+    tenantId,
+    tenantSlug,
+    checkoutSessionId: session.id,
+    cartId: cart.id,
+    checkoutStatus: session.status,
+    total: session.total
+  })
+
+  await capturePosthogEvent(
+    env,
+    'storefront_checkout_confirmed',
+    {
+      tenantId,
+      tenantSlug,
+      checkoutSessionId: session.id,
+      cartId: cart.id,
+      status: session.status,
+      total: session.total,
+      confirmedAt: session.confirmedAt ? session.confirmedAt.toISOString() : null
+    },
+    { distinctId: session.id }
+  )
+
   return session
 }
 
@@ -222,6 +299,7 @@ export async function submitStorefrontCheckout(
 ): Promise<{ orderId: string | null; checkoutSessionId: string }> {
   const tenantId = await resolveTenantId(env, tenantSlug)
   const cart = await getCartBySession(env, tenantId, sessionToken)
+  await assertRateLimit(env, `checkout:submit:${tenantId}:${sessionId}`, 5, 60)
   const authUser: AuthUser = {
     tenantId,
     userId: `storefront-${tenantId}`,
@@ -237,6 +315,51 @@ export async function submitStorefrontCheckout(
   if (session.cart.id !== cart.id) {
     throw new HTTPException(403, { message: 'Checkout session does not belong to this cart' })
   }
+
+  if (result.orderId) {
+    await getPrisma(env).auditLog.create({
+      data: {
+        tenantId,
+        action: 'storefront.checkout.submitted',
+        metadata: {
+          checkoutSessionId: session.id,
+          cartId: cart.id,
+          orderId: result.orderId,
+          tenantSlug,
+          paymentMethod: paymentMethod ?? null,
+          channel: 'storefront'
+        }
+      }
+    })
+  }
+
+  await logToBetterStack(env, {
+    level: 'info',
+    event: 'storefront.checkout.submitted',
+    tenantId,
+    tenantSlug,
+    checkoutSessionId: session.id,
+    cartId: cart.id,
+    orderId: result.orderId,
+    paymentMethod: paymentMethod ?? undefined,
+    total: session.total
+  })
+
+  await capturePosthogEvent(
+    env,
+    'storefront_checkout_submitted',
+    {
+      tenantId,
+      tenantSlug,
+      checkoutSessionId: session.id,
+      cartId: cart.id,
+      orderId: result.orderId,
+      paymentMethod: paymentMethod ?? undefined,
+      total: session.total,
+      submittedAt: session.submittedAt ? session.submittedAt.toISOString() : null
+    },
+    { distinctId: session.id }
+  )
 
   return result
 }
