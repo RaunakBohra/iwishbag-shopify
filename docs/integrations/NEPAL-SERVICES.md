@@ -1,6 +1,6 @@
 # Nepal-Specific Services Integration Guide
 
-Complete integration guide for Nepal-specific payment gateways, logistics, and communication services.
+Complete integration guide for Nepal-specific payment gateways, logistics, and communication services. Track execution in `docs/integrations/IMPLEMENTATION-CHECKLIST.md`.
 
 ---
 

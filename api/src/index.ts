@@ -26,12 +26,22 @@ import cartRoutes from './routes/cart'
 const app = new Hono<AppEnv>()
 
 // CORS middleware - must be before auth checks
-app.use('*', cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true,
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-}))
+app.use(
+  '*',
+  cors({
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3010',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3010'
+    ],
+    credentials: true,
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+  })
+)
 
 async function writeAccessLog(c: Context<AppEnv>, durationMs: number) {
   try {

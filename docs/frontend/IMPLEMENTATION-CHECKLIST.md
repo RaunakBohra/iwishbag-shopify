@@ -5,23 +5,23 @@
 ## 1. Merchant Onboarding Wizard
 - [ ] Build step components (`StoreDetails`, `Payments`, `Shipping`, `FirstProduct`, `Theme`, `GoLive`) with form validation.
 - [x] Persist progress via onboarding API (`/v1/onboarding/:tenantId`) and resume state on reload.
-- [ ] Add analytics instrumentation (PostHog) for step transitions and completion.
-- [ ] Surface checklist card on dashboard when onboarding incomplete.
-- [ ] Write Playwright flow covering happy path + resume-after-refresh.
+- [x] Add analytics instrumentation (PostHog) for step transitions and completion.
+- [x] Surface checklist card on dashboard when onboarding incomplete.
+- [x] Write Playwright flow covering happy path + resume-after-refresh.
 
 ## 2. Merchant Dashboard Foundation
-- [ ] Implement shell layout (sidebar/topnav) with Clerk/Access-protected routes.
-- [ ] Wire RBAC-aware navigation items (hide restricted links).
-- [ ] Add analytics placeholders using demo data (orders, revenue, inventory alerts).
-- [ ] Integrate notifications center (inventory alerts, onboarding tasks).
-- [ ] Snapshot dashboard layout tests (Chromatic/Playwright).
+- [x] Implement shell layout (sidebar/topnav) with Clerk/Access-protected routes.
+- [x] Wire RBAC-aware navigation items (hide restricted links).
+- [x] Add analytics placeholders using demo data (orders, revenue, inventory alerts).
+- [x] Integrate notifications center (inventory alerts, onboarding tasks).
+- [x] Snapshot dashboard layout tests (Chromatic/Playwright).
 
 ## 3. Catalog Management UI
-- [ ] Build product grid with filters, bulk actions, inline status toggle.
-- [ ] Implement product detail editor with variant builder + image uploader (R2).
-- [ ] Add PostHog events for CRUD actions and variant/image interactions.
-- [ ] Ensure API errors surface via toast + form validation states.
-- [ ] Cover critical flows with Playwright (create product, add variant, upload media).
+- [x] Build product grid with filters, bulk actions, inline status toggle.
+- [x] Implement product detail editor with variant builder + image uploader (R2).
+- [x] Add PostHog events for CRUD actions and variant/image interactions.
+- [x] Ensure API errors surface via toast + form validation states.
+- [x] Cover critical flows with Playwright (create product, add variant, upload media).
 
 ## 4. Store Builder & Themes
 - [ ] Create theme marketplace page with preview gallery and install flow.
@@ -33,7 +33,7 @@
 ## 5. Storefront UI & Checkout
 - [ ] Implement storefront listing/detail pages backed by storefront APIs; add locale toggle.
 - [ ] Add responsive design breakpoints (mobile, tablet, desktop) with design tokens.
-- [ ] Build cart drawer + checkout flow (anonymous toggle-aware).
+- [x] Build cart drawer + anonymous session wiring (checkout submission pending).
 - [ ] Integrate low-stock badges and plan-based limits (e.g., variant limits).
 - [ ] Add Lighthouse CI config for storefront performance budgets.
 

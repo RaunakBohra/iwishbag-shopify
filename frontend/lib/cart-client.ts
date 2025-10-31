@@ -190,11 +190,13 @@ async function request<T extends { signedToken?: string }>(tenant: string, path:
     headers.set('x-cart-session', sessionToken)
   }
 
-  const response = await fetch(`${base}/public/v1/storefront/${tenant}${path}`, {
+  const requestInit: RequestInit = {
     ...options,
     credentials: 'include',
     headers
-  })
+  }
+
+  const response = await fetch(`${base}/public/v1/storefront/${tenant}${path}`, requestInit)
 
   if (!response.ok) {
     const message = await response.text()

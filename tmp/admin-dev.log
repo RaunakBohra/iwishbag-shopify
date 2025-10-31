@@ -1,0 +1,9 @@
+  ▲ Next.js 14.2.33
+  - Local:        http://127.0.0.1:3000
+  - Network:      http://127.0.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 2.1s
+ ✓ Compiled /middleware in 184ms (72 modules)
+   Reload env: .env.local
+ ✓ Compiled in 45ms (72 modules)

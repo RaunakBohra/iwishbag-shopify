@@ -1,8 +1,19 @@
 'use client'
 
-import { useMemo } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  type ChangeEvent,
+  type MouseEvent as ReactMouseEvent
+} from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useCart } from './CartContext'
+import styles from './cart.module.css'
+
+function classNames(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ')
+}
 
 function formatCurrency(amount: number, currency = 'NPR') {
   return new Intl.NumberFormat('en-NP', {
@@ -12,10 +23,15 @@ function formatCurrency(amount: number, currency = 'NPR') {
 }
 
 export default function CartDrawer() {
-  const { cart, open, setOpen, pending, updateItem, removeItem, clearCart } = useCart()
+  const { cart, open, setOpen, pending, updateItem, removeItem, clearCart, error } = useCart()
   const router = useRouter()
   const params = useParams()
-  const tenantSlug = typeof params?.tenant === 'string' ? params.tenant : Array.isArray(params?.tenant) ? params?.tenant[0] : ''
+  const tenantSlug =
+    typeof params?.tenant === 'string'
+      ? params.tenant
+      : Array.isArray(params?.tenant)
+        ? params?.tenant[0]
+        : ''
 
   const totals = useMemo(() => {
     if (!cart) {
@@ -29,165 +45,169 @@ export default function CartDrawer() {
     }
   }, [cart])
 
+  const currency = cart?.currency ?? 'NPR'
+  const breakdown = cart?.breakdown
+  const shippingEstimate = breakdown?.shipping?.total ?? null
+
+  const closeDrawer = useCallback(() => {
+    setOpen(false)
+  }, [setOpen])
+
+  const handleQuantityChange = useCallback(
+    (itemId: string) => (event: ChangeEvent<HTMLInputElement>) => {
+      const parsed = Number.parseInt(event.target.value, 10)
+      const safeValue = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed
+      updateItem(itemId, safeValue)
+    },
+    [updateItem]
+  )
+
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDrawer()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, closeDrawer])
+
+  const handleOverlayClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      closeDrawer()
+    }
+  }
+
   return (
-    <div
-      className="cart-drawer"
-      data-open={open}
-      style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: 'min(380px, 90vw)',
-        transform: open ? 'translateX(0)' : 'translateX(105%)',
-        transition: 'transform 0.25s ease-in-out',
-        background: '#fff',
-        boxShadow: '-12px 0 45px rgba(15, 23, 42, 0.12)',
-        padding: '1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 2000
-      }}
-    >
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Your Cart</h2>
-        <button type="button" onClick={() => setOpen(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem' }}>
-          ×
-        </button>
-      </header>
-      <div style={{ flex: '1 1 auto', overflowY: 'auto', paddingRight: '0.5rem' }}>
-        {!cart || cart.items.length === 0 ? (
-          <p style={{ color: '#64748b' }}>Your cart is empty. Add a product to get started.</p>
-        ) : (
-          <ul style={{ display: 'grid', gap: '1rem' }}>
-            {cart.items.map((item) => (
-              <li
-                key={item.id}
-                style={{
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '1rem',
-                  padding: '1rem',
-                  display: 'grid',
-                  gap: '0.5rem'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                  <div>
-                    <strong>{item.title ?? 'Product'}</strong>
-                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.875rem' }}>{item.sku ?? 'SKU'}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.id)}
-                    disabled={pending}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#ef4444',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                  <label style={{ fontSize: '0.875rem', color: '#475569' }}>
-                    Qty
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(event) => updateItem(item.id, Number(event.target.value))}
+    <>
+      <div
+        className={classNames(styles.cartOverlay, open && styles.cartOverlayOpen)}
+        onClick={handleOverlayClick}
+        aria-hidden={!open}
+      />
+      <aside
+        className={classNames(styles.cartDrawer, open && styles.cartDrawerOpen)}
+        role="dialog"
+        aria-label="Shopping cart"
+        aria-modal="true"
+        id="cart-drawer"
+      >
+        <header className={styles.drawerHeader}>
+          <h2 className={styles.drawerTitle}>Your Cart</h2>
+          <button type="button" onClick={closeDrawer} className={styles.drawerClose} aria-label="Close cart">
+            ×
+          </button>
+        </header>
+
+        <div className={styles.drawerBody}>
+          {!cart || cart.items.length === 0 ? (
+            <p className={styles.emptyState}>Your cart is empty. Explore the catalog to add products.</p>
+          ) : (
+            <ul className={styles.cartItems}>
+              {cart.items.map((item) => (
+                <li key={item.id} className={styles.cartItem}>
+                  <div className={styles.itemHeader}>
+                    <div>
+                      <span className={styles.itemTitle}>{item.title ?? 'Product'}</span>
+                      <p className={styles.itemSku}>{item.sku ?? 'SKU not provided'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
                       disabled={pending}
-                      style={{
-                        marginLeft: '0.5rem',
-                        width: '4rem',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #cbd5f5'
-                      }}
-                    />
-                  </label>
-                  <span style={{ fontWeight: 600 }}>{formatCurrency(item.subtotal, cart?.currency)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <footer style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', display: 'grid', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-          <span>Subtotal</span>
-          <span>{formatCurrency(totals.subtotal, cart?.currency)}</span>
+                      className={styles.removeButton}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className={styles.itemControls}>
+                    <label style={{ fontSize: '0.85rem', color: '#475569' }}>
+                      Qty
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={handleQuantityChange(item.id)}
+                        disabled={pending}
+                        className={styles.quantityInput}
+                        aria-label={`Quantity for ${item.title ?? 'item'}`}
+                      />
+                    </label>
+                    <span className={styles.lineSubtotal}>{formatCurrency(item.subtotal, currency)}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-          <span>Discount</span>
-          <span>-{formatCurrency(totals.discount, cart?.currency)}</span>
-        </div>
-        {cart?.breakdown ? (
-          <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'grid', gap: '0.15rem' }}>
-            {cart.breakdown.discounts.lineItems > 0 ? (
-              <span>
-                • Line items: -{formatCurrency(cart.breakdown.discounts.lineItems, cart.currency)}
-              </span>
-            ) : null}
-            {cart.breakdown.discounts.order > 0 ? (
-              <span>
-                • Order promos: -{formatCurrency(cart.breakdown.discounts.order, cart.currency)}
-              </span>
-            ) : null}
-            {cart.breakdown.discounts.giftCards > 0 ? (
-              <span>
-                • Gift cards: -{formatCurrency(cart.breakdown.discounts.giftCards, cart.currency)}
-              </span>
-            ) : null}
+
+        <footer className={styles.drawerFooter}>
+          {error ? <p className={styles.drawerError}>{error}</p> : null}
+          <div className={styles.summaryRow}>
+            <span>Subtotal</span>
+            <span>{formatCurrency(totals.subtotal, currency)}</span>
           </div>
-        ) : null}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-          <span>Tax</span>
-          <span>{formatCurrency(totals.tax, cart?.currency)}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
-          <span>Total</span>
-          <span>{formatCurrency(totals.total, cart?.currency)}</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => clearCart()}
-          disabled={pending || !cart || cart.items.length === 0}
-          style={{
-            border: '1px solid #94a3b8',
-            borderRadius: '999px',
-            padding: '0.75rem 1rem',
-            background: 'transparent',
-            color: '#475569'
-          }}
-        >
-          Clear cart
-        </button>
-        <button
-          type="button"
-          disabled={pending || !cart || cart.items.length === 0}
-          onClick={() => {
-            if (!cart || cart.items.length === 0) return
-            if (tenantSlug) {
-              setOpen(false)
+          <div className={styles.summaryRow}>
+            <span>Discounts</span>
+            <span>-{formatCurrency(totals.discount, currency)}</span>
+          </div>
+          {breakdown ? (
+            <div className={styles.discountBreakdown}>
+              {breakdown.discounts.lineItems > 0 ? (
+                <span>• Line items: -{formatCurrency(breakdown.discounts.lineItems, currency)}</span>
+              ) : null}
+              {breakdown.discounts.order > 0 ? (
+                <span>• Order promos: -{formatCurrency(breakdown.discounts.order, currency)}</span>
+              ) : null}
+              {breakdown.discounts.giftCards > 0 ? (
+                <span>• Gift cards: -{formatCurrency(breakdown.discounts.giftCards, currency)}</span>
+              ) : null}
+              {breakdown.shipping?.discount && breakdown.shipping.discount > 0 ? (
+                <span>
+                  • Shipping discount: -{formatCurrency(breakdown.shipping.discount, currency)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+          <div className={styles.summaryRow}>
+            <span>Shipping</span>
+            {shippingEstimate && shippingEstimate > 0 ? (
+              <span>{formatCurrency(shippingEstimate, currency)}</span>
+            ) : (
+              <span className={styles.muted}>Calculated at checkout</span>
+            )}
+          </div>
+          <div className={styles.summaryRow}>
+            <span>Tax</span>
+            <span>{formatCurrency(totals.tax, currency)}</span>
+          </div>
+          <div className={classNames(styles.summaryRow, styles.summaryRowTotal)}>
+            <span>Total</span>
+            <span>{formatCurrency(totals.total, currency)}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => clearCart()}
+            disabled={pending || !cart || cart.items.length === 0}
+            className={classNames(styles.drawerButton, styles.drawerButtonSecondary)}
+          >
+            Clear cart
+          </button>
+          <button
+            type="button"
+            disabled={pending || !cart || cart.items.length === 0}
+            onClick={() => {
+              if (!cart || cart.items.length === 0 || !tenantSlug) return
+              closeDrawer()
               router.push(`/${tenantSlug}/checkout`)
-            }
-          }}
-          style={{
-            border: 'none',
-            borderRadius: '999px',
-            padding: '0.85rem 1rem',
-            background: pending || !cart || cart.items.length === 0 ? '#94a3b8' : '#0ea5e9',
-            color: '#fff',
-            fontWeight: 600,
-            cursor: pending || !cart || cart.items.length === 0 ? 'not-allowed' : 'pointer'
-          }}
-        >
-          Go to checkout
-        </button>
-      </footer>
-    </div>
+            }}
+            className={classNames(styles.drawerButton, styles.drawerButtonPrimary)}
+          >
+            Go to checkout
+          </button>
+        </footer>
+      </aside>
+    </>
   )
 }

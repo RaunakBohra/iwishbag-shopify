@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import type { AppEnv } from '../types'
 import { requireAccessToken } from '../middleware/access'
-import { getPlatformHealth, listRecentTenants } from '../services/admin.service'
+import { getDashboardOverview, getPlatformHealth, listRecentTenants } from '../services/admin.service'
 import { provisionTenant } from '../services/tenant-provisioning.service'
 import { getPrisma } from '../lib/prisma'
 
@@ -54,6 +54,11 @@ admin.get('/health', async (c) => {
 admin.get('/tenants', async (c) => {
   const tenants = await listRecentTenants(c.env)
   return c.json({ data: tenants })
+})
+
+admin.get('/dashboard/overview', async (c) => {
+  const overview = await getDashboardOverview(c.env)
+  return c.json({ data: overview })
 })
 
 admin.post('/tenants', zValidator('json', provisionSchema), async (c) => {

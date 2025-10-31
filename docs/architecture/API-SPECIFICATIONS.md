@@ -3,7 +3,7 @@
 > **Version:** 1.0
 > **Status:** In Progress
 
-This document defines the REST surface for the Nepal E-Commerce Platform and breaks implementation into atomic tasks. Treat each checkbox as an issue-ready unit of work.
+This document defines the REST surface for the Nepal E-Commerce Platform and breaks implementation into atomic tasks. Treat each checkbox as an issue-ready unit of work. See `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` for execution tracking.
 
 ---
 
@@ -35,12 +35,13 @@ This document defines the REST surface for the Nepal E-Commerce Platform and bre
 - `GET /v1/auth/me`
 
 ### Implementation Tasks
-- [ ] Validate payloads with Zod schemas per endpoint.
-- [ ] Create shared password policy validator (min length, complexity).
-- [ ] Persist sessions in Cloudflare KV with 7-day TTL.
-- [ ] Emit structured audit events on register/login/logout.
-- [ ] Integrate rate limit (5 attempts/15 min) on login + password reset.
-- [ ] Expose `X-Auth-Token-Ttl` header on refresh and `me` endpoints.
+- ✅ Validate payloads with Zod schemas per endpoint.
+- ✅ Create shared password policy validator (min length, complexity).
+- ✅ Persist sessions in Cloudflare KV with 7-day TTL.
+- ✅ Emit structured audit events on register/login/logout.
+- ✅ Integrate rate limit (5 attempts/15 min) on login + password reset.
+- ✅ Expose `X-Auth-Token-Ttl` header on refresh and `me` endpoints.
+- ⏳ Document recovery-code redemption endpoint (future) and admin 2FA reset workflow.
 
 ---
 
@@ -87,7 +88,7 @@ This document defines the REST surface for the Nepal E-Commerce Platform and bre
 ### Implementation Tasks
 - [ ] Enforce optimistic concurrency via `updated_at` check on updates.
 - [ ] Upload product media to R2; return signed URLs.
-- [x] Trigger MeiliSearch re-index via Cloudflare Queue on create/update/delete.
+- [x] Trigger catalog worker to recompute inventory snapshots on create/update/delete.
 - [ ] Add background job to recalc inventory counts nightly.
 - [ ] Validate variant SKUs unique per product.
 
@@ -295,7 +296,7 @@ This document defines the REST surface for the Nepal E-Commerce Platform and bre
 - [ ] Smoke suite executed post-deploy using Playwright synthetic monitor.
 - [ ] Update `docs/features/*` guides with actual endpoint paths.
 - [ ] Notify support + success teams once new endpoints reach production.
-- **Storefront Product Feed:** Provide unauthenticated product listing for customers via tenant slug, backed by MeiliSearch and inventory snapshots.
+- **Storefront Product Feed:** Provide unauthenticated product listing for customers via tenant slug, backed by Postgres queries and cached inventory snapshots.
 - **Caching:** Cloudflare edge cache with `stale-while-revalidate=30s` and per-tenant cache keys to balance freshness and cost.
 - **/public/v1/storefront/:tenantSlug/products**
   - **Purpose:** Customer-facing listing endpoint for storefront apps.

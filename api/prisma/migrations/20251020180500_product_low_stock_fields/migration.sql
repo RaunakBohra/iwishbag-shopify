@@ -1,3 +1,0 @@
-ALTER TABLE "Product"
-ADD COLUMN "lowStockThreshold" INTEGER DEFAULT 5,
-ADD COLUMN "lastLowStockAlertAt" TIMESTAMP(3);

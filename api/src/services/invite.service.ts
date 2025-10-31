@@ -1,8 +1,10 @@
 import { HTTPException } from 'hono/http-exception'
+import { Prisma } from '@prisma/client'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
+import { hashPassword } from '../lib/password'
 import { getPlanLimits } from './tenant.service'
-import { generateRefreshToken } from '../lib/tokens'
+import { createKvSignedToken, consumeKvSignedToken, deleteKvSignedToken } from '../lib/kv-token'
 
 interface CreateInvitePayload {
   email: string
@@ -18,8 +20,17 @@ function requireTenantId(authUser: AuthUser) {
 }
 
 const DEFAULT_EXPIRATION_HOURS = 48
+const INVITE_TOKEN_TTL_SECONDS = 60 * 15
+const INVITE_TOKEN_PREFIX = 'invite'
 
-function sanitizeInvite(invite: Awaited<ReturnType<typeof fetchInvite>>) {
+type InviteWithRelations = Prisma.InviteGetPayload<{
+  include: {
+    inviter: true
+    role: true
+  }
+}>
+
+function sanitizeInvite(invite: InviteWithRelations, options?: { token?: string }) {
   return {
     id: invite.id,
     email: invite.email,
@@ -33,11 +44,12 @@ function sanitizeInvite(invite: Awaited<ReturnType<typeof fetchInvite>>) {
     },
     expiresAt: invite.expiresAt,
     acceptedAt: invite.acceptedAt,
-    createdAt: invite.createdAt
+    createdAt: invite.createdAt,
+    ...(options?.token ? { token: options.token } : {})
   }
 }
 
-async function fetchInvite(prisma: ReturnType<typeof getPrisma>, inviteId: string, tenantId: string) {
+async function fetchInvite(prisma: ReturnType<typeof getPrisma>, inviteId: string, tenantId: string): Promise<InviteWithRelations> {
   const invite = await prisma.invite.findFirst({
     where: {
       id: inviteId,
@@ -94,7 +106,7 @@ export async function createInvite(env: EnvBindings, authUser: AuthUser, payload
     const inviteCount = await tx.invite.count({ where: { tenantId, status: 'PENDING' } })
 
     if (staffCount + inviteCount >= limits.staff) {
-      throw new HTTPException(409, { message: 'Staff invite limit reached for current plan' })
+      throw new HTTPException(429, { message: 'Staff invite limit reached for current plan' })
     }
 
     const existingInvite = await tx.invite.findFirst({
@@ -112,7 +124,6 @@ export async function createInvite(env: EnvBindings, authUser: AuthUser, payload
     const roleName = payload.roleName ?? 'Staff'
     const role = await getRoleByName(tx, tenantId, roleName)
 
-    const token = generateRefreshToken()
     const expiresAt = new Date(Date.now() + (payload.expiresInHours ?? DEFAULT_EXPIRATION_HOURS) * 60 * 60 * 1000)
 
     const invite = await tx.invite.create({
@@ -122,7 +133,7 @@ export async function createInvite(env: EnvBindings, authUser: AuthUser, payload
         inviterId: authUser.userId,
         roleId: role.id,
         status: 'PENDING',
-        token,
+        token: 'pending',
         expiresAt
       },
       include: {
@@ -143,9 +154,21 @@ export async function createInvite(env: EnvBindings, authUser: AuthUser, payload
     return invite
   })
 
-  // TODO: send invite email via SES/notification service
+  const { token, tokenId } = await createKvSignedToken(env, INVITE_TOKEN_PREFIX, {
+    inviteId: result.id,
+    tenantId,
+    email
+  }, INVITE_TOKEN_TTL_SECONDS)
 
-  return sanitizeInvite(result)
+  await prisma.invite.update({
+    where: { id: result.id },
+    data: {
+      token: tokenId
+    }
+  })
+
+  // TODO: send invite email via transactional service with token
+  return sanitizeInvite({ ...result, token: tokenId }, { token })
 }
 
 export async function resendInvite(env: EnvBindings, authUser: AuthUser, inviteId: string) {
@@ -158,13 +181,20 @@ export async function resendInvite(env: EnvBindings, authUser: AuthUser, inviteI
     throw new HTTPException(400, { message: 'Only pending invites can be resent' })
   }
 
-  const token = generateRefreshToken()
+  await deleteKvSignedToken(env, INVITE_TOKEN_PREFIX, invite.token)
+
+  const { token, tokenId } = await createKvSignedToken(env, INVITE_TOKEN_PREFIX, {
+    inviteId: invite.id,
+    tenantId,
+    email: invite.email
+  }, INVITE_TOKEN_TTL_SECONDS)
+
   const expiresAt = new Date(Date.now() + DEFAULT_EXPIRATION_HOURS * 60 * 60 * 1000)
 
   const updated = await prisma.invite.update({
     where: { id: inviteId },
     data: {
-      token,
+      token: tokenId,
       expiresAt,
       updatedAt: new Date()
     },
@@ -174,9 +204,9 @@ export async function resendInvite(env: EnvBindings, authUser: AuthUser, inviteI
     }
   })
 
-  // TODO: send new invitation email
+  // TODO: send new invitation email with token
 
-  return sanitizeInvite(updated)
+  return sanitizeInvite(updated, { token })
 }
 
 export async function revokeInvite(env: EnvBindings, authUser: AuthUser, inviteId: string) {
@@ -207,15 +237,24 @@ export async function revokeInvite(env: EnvBindings, authUser: AuthUser, inviteI
     })
   })
 
+  await deleteKvSignedToken(env, INVITE_TOKEN_PREFIX, invite.token)
+
   return { success: true }
 }
 
 export async function acceptInvite(env: EnvBindings, payload: { token: string; firstName: string; lastName: string; password: string }) {
   const prisma = getPrisma(env)
 
+  const { data } = await consumeKvSignedToken<{ inviteId: string; tenantId: string; email: string }>(
+    env,
+    INVITE_TOKEN_PREFIX,
+    payload.token
+  )
+
   const invite = await prisma.invite.findFirst({
     where: {
-      token: payload.token
+      id: data.inviteId,
+      tenantId: data.tenantId
     },
     include: {
       role: true,

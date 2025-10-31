@@ -17,7 +17,7 @@
 - [ ] Add server-side key to API (`POSTHOG_API_KEY`) for backend instrumentation (Workers).
 - [ ] Add client-side key (`NEXT_PUBLIC_POSTHOG_KEY`) for frontend analytics.
 - [ ] Update GitHub/Cloudflare secrets with matching names.
-- [ ] Update `docs/secrets/README.md` with vault locations and GitHub secret names.
+- [ ] Update `docs/secrets/README.md` with the `.env.local` + GitHub secret references.
 
 ### 1.3 Instrumentation
 - [ ] Install PostHog SDKs:
@@ -26,6 +26,7 @@
   ```
 - [ ] Initialize PostHog in frontend entry points and merchant dashboard.
 - [ ] Wrap API event tracking (orders created, onboarding steps, etc.).
+- [ ] Emit dashboard events (`dashboard_overview_loaded`, `dashboard_overview_failed`, `dashboard_onboarding_completed`, `dashboard_onboarding_needs_action`) for activation reporting.
 - [ ] Enable autocapture/heatmaps if desired (toggle in PostHog settings).
 - [ ] Configure feature flags/experiments (optional for later phases).
 
@@ -34,6 +35,57 @@
 - [ ] Anonymize IPs or disable storing personal data as needed.
 - [ ] Create event naming conventions (`merchant_*`, `storefront_*`).
 - [ ] Configure cohorts/dashboards for KPIs (merchant activation, conversion).
+- [ ] Dashboard: **Admin Activation Pulse**
+  1. Create a PostHog dashboard named *Admin Activation Pulse*.
+  2. Add the following insights (JSON export examples below):
+     - **Overview Load Success Rate** – Trends comparing `dashboard_overview_loaded` vs `dashboard_overview_failed` events.
+     - **Average Revenue on Load** – Funnel that averages the `revenue` property from `dashboard_overview_loaded`.
+     - **Onboarding Completion Rate** – Ratio of `dashboard_onboarding_completed` vs `dashboard_onboarding_needs_action` grouped by week.
+  3. Recommended Insight JSON (import via *More > Import from JSON*):
+     ```json
+     {
+       "name": "Overview Load Success Rate",
+       "filters": {
+         "insight": "TRENDS",
+         "events": [
+           {"id": "dashboard_overview_loaded", "math": "total"},
+           {"id": "dashboard_overview_failed", "math": "total"}
+         ],
+         "display": "ActionsTable"
+       }
+     }
+     ```
+     ```json
+     {
+       "name": "Average Revenue on Load",
+       "filters": {
+         "insight": "TRENDS",
+         "events": [
+           {
+             "id": "dashboard_overview_loaded",
+             "math": "average",
+             "math_property": "revenue"
+           }
+         ],
+         "interval": "week"
+       }
+     }
+     ```
+     ```json
+     {
+       "name": "Onboarding completion rate",
+       "filters": {
+         "insight": "FUNNELS",
+         "events": [
+           {"id": "dashboard_onboarding_needs_action"},
+           {"id": "dashboard_onboarding_completed"}
+         ],
+         "funnel_window_interval": 7,
+         "funnel_window_interval_unit": "day"
+       }
+     }
+     ```
+  4. Pin the dashboard so ops can monitor activation trends immediately after deploys.
 
 ---
 
@@ -45,7 +97,7 @@
 - [ ] Retrieve API tokens:
   - Better Logs Ingestion Token (for Workers log streaming).
   - Better Uptime API key.
-- [ ] Store tokens in vault + GitHub secrets (`BETTERSTACK_TOKEN`, `BETTERSTACK_LOGS_TOKEN`, etc.).
+- [ ] Store tokens in `.env.local` and mirror to GitHub/Cloudflare secrets (`BETTERSTACK_TOKEN`, `BETTERSTACK_LOGS_TOKEN`, etc.).
 
 ### 2.2 Log Streaming
 - [ ] Import the helper below (drop into `api/src/lib/logging.ts`) and call `logToBetterStack`.
@@ -87,7 +139,16 @@
   ```
 
 - [ ] Add structured logging (JSON) with `request_id`, `tenant_id`, `user_id`.
+- [ ] Log dashboard metrics via `dashboard.overview.generated` so Better Stack dashboards can chart revenue/activation trends.
 - [ ] Create log pipelines/alerts (error rate >1%, auth failures, etc.).
+- [ ] Dashboard: **Dashboard Overview Metrics** *(Better Logs)*
+  1. In Better Stack Logs, create a new dashboard titled *Dashboard Overview Metrics*.
+  2. Add widgets using the `dashboard.overview.generated` event:
+     - **Revenue (7d)** – query: `event="dashboard.overview.generated"` → chart `avg(revenue)` grouped by day.
+     - **Fulfilled Orders vs Active Stores** – chart using `avg(fulfilledOrders)` and `avg(activeStores)`.
+     - **Conversion Rate Trend** – chart `avg(conversionRate)` grouped weekly.
+  3. Alert: trigger when `avg(conversionRate) < 2` or `avg(revenue)` drops more than 30% week-over-week.
+  4. Send alerts to PagerDuty/Slack using existing escalation policy.
 
 ### 2.3 Uptime Monitoring
 - [ ] Make the helper executable (`chmod +x scripts/monitoring/create_betterstack_monitors.sh`).
@@ -108,10 +169,10 @@
 
 ## 3. Secret Management Summary
 
-| Service      | Secret Name (GitHub/Cloudflare) | Vault Item                                 | Notes                          |
-|--------------|----------------------------------|---------------------------------------------|--------------------------------|
-| PostHog      | `POSTHOG_API_KEY`, `POSTHOG_HOST`, `NEXT_PUBLIC_POSTHOG_KEY` | 1Password → `PostHog – iwishbag-store` | Keep separate keys for client/server. |
-| Better Stack | `BETTERSTACK_TOKEN`, `BETTERSTACK_LOGS_TOKEN` | 1Password → `Better Stack – iwishbag-store` | Distinguish logs vs uptime tokens. |
+| Service      | Secret Name (GitHub/Cloudflare) | Local Storage                | Notes                          |
+|--------------|----------------------------------|------------------------------|--------------------------------|
+| PostHog      | `POSTHOG_API_KEY`, `POSTHOG_HOST`, `NEXT_PUBLIC_POSTHOG_KEY` | `.env.local` (api + frontend) | Keep separate keys for client/server; mirror to GitHub secrets. |
+| Better Stack | `BETTERSTACK_TOKEN`, `BETTERSTACK_LOGS_TOKEN` | `.env.local` (scripts) | Distinguish logs vs uptime tokens; add to GitHub secrets when monitors enabled. |
 
 ---
 

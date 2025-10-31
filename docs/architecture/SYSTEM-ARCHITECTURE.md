@@ -78,7 +78,7 @@
    |_NepalPay QR             │  Logistics (Nepal)               │
 │                            │  ├─ Pathao API                    │
 │  Search & Analytics        │  ├─ Tootle API                    │
-│  ├─ MeiliSearch (Fly.io)   │  └─ Nepal Post                    │
+│  ├─ Postgres Search (inline)   │  └─ Nepal Post                    │
 │  ├─ PostHog (Self-hosted)  │                                   │
 │  └─ Better Stack (Logs)    │  Domain Management               │
 │                            │  └─ DNSimple API                  │

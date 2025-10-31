@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import type { EnvBindings } from '../../types'
 import { provisionTenant } from '../tenant-provisioning.service'

@@ -70,7 +70,7 @@
 1. **Project & Branches**
    - ✅ Project `iwishbag.store` with branches `main`, `staging`, `dev` created (via Neon dashboard).
 2. **Connection Strings**
-   - ✅ Direct + pooled URLs stored in 1Password (`Neon Prod/Staging/Dev` entries).
+   - ✅ Direct + pooled URLs copied into `api/.env.local` (do not commit).
 
 3. **Roles & Extensions**
    - [ ] Run SQL from `docs/database/NEON-MULTI-TENANT.md` to create roles, enable RLS, set default privileges.
@@ -83,15 +83,17 @@
 
 ## 4. Supporting Services & Queues
 
-- **MeiliSearch**
-  - [ ] Deploy managed instance (Fly.io/DigitalOcean) or self-host; note `MEILI_HOST`, `MEILI_MASTER_KEY`.
+- See also `docs/ops/SUPPORTING-SERVICES-CHECKLIST.md` for owners, environments, and credential tracking.
+
+- **Storefront Search**
+  - ✅ Uses Prisma queries against the primary Postgres database; no external search cluster required.
 - **PostHog**
   - ✅ Project created; client host/key added to `frontend/.env.local`.
   - ✅ Server env template seeded (`api/.dev.vars`); awaiting secure PostHog API key entry.
 - **Better Stack**
-  - ✅ Tokens stored; log helper at `api/src/lib/logging.ts`; monitors provisioned via script.
+  - ✅ Tokens stored locally while monitoring remains in-progress; log helper at `api/src/lib/logging.ts`.
 - **AWS SES**
-  - ✅ Domain `iwishbag.store` verified; SMTP credentials stored in vault.
+  - ✅ Domain `iwishbag.store` verified; capture SMTP credentials in `.env.local` and encrypted backup.
 - **Sparrow SMS**
   - [ ] Register sender IDs, fetch API token.
 - **DNSimple**
@@ -100,7 +102,7 @@
   - [ ] Create service + escalation policy for Sev1 incidents.
 
 - **AWS SQS (replacing Cloudflare Queues)**
-  - ✅ Queues + DLQs created with redrive policies; IAM user `iwishbag-store-worker` provisioned; access keys stored in vault.
+  - ✅ Queues + DLQs created with redrive policies; IAM user `iwishbag-store-worker` provisioned; keep latest key CSV in encrypted backup.
 
 Document all credential locations in `docs/secrets/README.md` (do not store actual secrets in repo).
 
@@ -116,7 +118,7 @@ Document all credential locations in `docs/secrets/README.md` (do not store actu
   # ...repeat for all credentials
   ```
 - [ ] Configure GitHub Actions repository secrets:
-  - `CLOUDFLARE_API_TOKEN`, `NEON_API_KEY`, `SES_SMTP_USER`, `SES_SMTP_PASS`, `SPARROW_SMS_TOKEN`, `MEILI_MASTER_KEY`, `POSTHOG_API_KEY`, `BETTERSTACK_TOKEN`, `PAGERDUTY_INTEGRATION_KEY`.
+- `CLOUDFLARE_API_TOKEN`, `NEON_API_KEY`, `SES_SMTP_USER`, `SES_SMTP_PASS`, `SPARROW_SMS_TOKEN`, `POSTHOG_API_KEY`, `BETTERSTACK_TOKEN`, `PAGERDUTY_INTEGRATION_KEY`.
   - `AWS_SQS_ACCESS_KEY_ID`, `AWS_SQS_SECRET_ACCESS_KEY`, `AWS_SQS_REGION`, `AWS_SQS_JOBS_URL`, `AWS_SQS_WEBHOOKS_URL`, `AWS_SQS_DLQ_JOBS_URL`, `AWS_SQS_DLQ_WEBHOOKS_URL`.
 - [ ] Update `docs/PROJECT-TODO.md` with links to secret storage locations.
 

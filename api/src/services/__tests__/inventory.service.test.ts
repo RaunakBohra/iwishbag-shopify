@@ -13,7 +13,10 @@ const mockPrisma = {
   productInventory: {
     findMany: vi.fn(),
     count: vi.fn(),
-    upsert: vi.fn()
+    upsert: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
+    create: vi.fn()
   },
   product: {
     findFirst: vi.fn(),
@@ -56,6 +59,12 @@ vi.mock('../catalog-events.service', () => ({
   enqueueCatalogEvent: (...args: any[]) => enqueueCatalogEventMock(...args)
 }))
 
+const logToBetterStackMock = vi.fn()
+
+vi.mock('../../lib/logging', () => ({
+  logToBetterStack: (...args: any[]) => logToBetterStackMock(...args)
+}))
+
 const inventoryAlertsQueue = {
   send: vi.fn().mockResolvedValue(undefined)
 }
@@ -88,6 +97,9 @@ beforeEach(() => {
     }
   ])
   mockPrisma.productInventory.count.mockResolvedValue(1)
+  mockPrisma.productInventory.findFirst.mockResolvedValue(null)
+  mockPrisma.productInventory.update.mockResolvedValue({})
+  mockPrisma.productInventory.create.mockResolvedValue({})
   mockPrisma.product.findFirst.mockResolvedValue({
     id: 'prod-1',
     inventory: 5,
@@ -95,7 +107,7 @@ beforeEach(() => {
     lowStockThreshold: 5,
     tenant: { id: 'tenant-1', name: 'Tenant' }
   })
-  mockPrisma.product.update.mockResolvedValue({})
+ mockPrisma.product.update.mockResolvedValue({})
   mockPrisma.productInventory.upsert.mockResolvedValue({})
   mockPrisma.inventoryAdjustment.create.mockResolvedValue({ id: 'adj-1' })
   mockPrisma.inventoryAdjustment.findMany.mockResolvedValue([{ id: 'adj-1', quantity: 2 }])
@@ -103,6 +115,7 @@ beforeEach(() => {
   applyUsageDeltaMock.mockResolvedValue({})
   enqueueCatalogEventMock.mockResolvedValue(undefined)
   inventoryAlertsQueue.send.mockClear()
+  logToBetterStackMock.mockResolvedValue(undefined)
 })
 
 describe('inventory service', () => {
@@ -124,7 +137,12 @@ describe('inventory service', () => {
       where: { id: 'prod-1' },
       data: { inventory: 8 }
     })
-    expect(mockPrisma.productInventory.upsert).toHaveBeenCalled()
+    expect(mockPrisma.productInventory.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { productId: 'prod-1', variantId: null } })
+    )
+    expect(mockPrisma.productInventory.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ productId: 'prod-1', available: 8 }) })
+    )
     expect(mockPrisma.inventoryAdjustment.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ quantity: 3, memo: 'Restock' })

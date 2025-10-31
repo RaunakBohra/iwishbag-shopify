@@ -28,16 +28,16 @@ media.post('/:productId', requireRole(['OWNER', 'PLATFORM_ADMIN']), async (c) =>
   const authUser = c.var.authUser!
 
   const form = await c.req.formData()
-  const file = form.get('file')
+  const fileEntry = form.get('file')
 
-  if (!(file instanceof File)) {
+  if (!fileEntry || typeof fileEntry !== 'object' || typeof (fileEntry as Blob).stream !== 'function') {
     return c.json({ error: { message: 'Image file is required' } }, 400)
   }
 
   const alt = form.get('alt')
 
   const image = await addImage(c.env, authUser, c.req.param('productId'), {
-    file,
+    file: fileEntry as Blob,
     alt: typeof alt === 'string' ? alt : undefined
   })
 

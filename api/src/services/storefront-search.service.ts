@@ -1,7 +1,7 @@
+import { Prisma } from '@prisma/client'
 import { HTTPException } from 'hono/http-exception'
 import { getPrisma } from '../lib/prisma'
 import type { EnvBindings } from '../types'
-import { getMeili } from '../lib/meili'
 import { slugify } from '../utils/slugify'
 
 interface SearchParams {
@@ -29,102 +29,269 @@ interface StorefrontProductResponse {
   }
 }
 
-type MeiliHit = {
-  id: string
-  tenantId: string
-  title: string
-  description?: string
-  status: string
-  price?: number
-  compareAtPrice?: number | null
-  baseInventory?: number
-  variantInventory?: number
-  tags?: string[]
-  collections?: string[]
-  variants?: Array<{ id: string; name: string; sku?: string | null; price?: number; inventory?: number }>
-  images?: Array<{ id: string; url: string; alt?: string; position: number }>
-  updatedAt?: string
-  slug?: string
+type ProductWithRelations = Prisma.ProductGetPayload<{
+  include: {
+    variants: true
+    images: true
+    tags: {
+      include: {
+        tag: true
+      }
+    }
+    collections: {
+      include: {
+        collection: true
+      }
+    }
+  }
+}>
+
+type FacetValue = { value: string; count: number }
+type FacetResult = Record<string, FacetValue[]> & {
+  priceRanges?: Array<{ min: number; max: number; count: number }>
 }
 
-function buildFilters(params: SearchParams) {
-  const filters: string[] = ['status = "ACTIVE"']
+function decimalToNumber(value: Prisma.Decimal | number | null | undefined): number | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (typeof value === 'number') {
+    return value
+  }
+
+  try {
+    return value.toNumber()
+  } catch {
+    return Number(value)
+  }
+}
+
+function buildFilters(tenantId: string, params: SearchParams) {
+  const filters: Prisma.ProductWhereInput[] = [
+    { tenantId },
+    { status: 'ACTIVE' },
+    { deletedAt: null }
+  ]
 
   if (params.collection) {
-    filters.push(`collections = "${params.collection}"`)
+    filters.push({
+      collections: {
+        some: {
+          collection: {
+            OR: [
+              { slug: params.collection },
+              { name: { equals: params.collection, mode: 'insensitive' } }
+            ]
+          }
+        }
+      }
+    })
   }
 
   if (params.tags?.length) {
     params.tags.forEach((tag) => {
-      filters.push(`tags = "${tag}"`)
+      filters.push({
+        tags: {
+          some: {
+            tag: {
+              OR: [
+                { slug: tag },
+                { name: { equals: tag, mode: 'insensitive' } }
+              ]
+            }
+          }
+        }
+      })
     })
   }
 
-  if (params.priceMin !== undefined) {
-    filters.push(`price >= ${params.priceMin}`)
-  }
+  if (params.priceMin !== undefined || params.priceMax !== undefined) {
+    const priceFilter: Prisma.DecimalFilter = {}
 
-  if (params.priceMax !== undefined) {
-    filters.push(`price <= ${params.priceMax}`)
+    if (params.priceMin !== undefined) {
+      priceFilter.gte = new Prisma.Decimal(params.priceMin)
+    }
+
+    if (params.priceMax !== undefined) {
+      priceFilter.lte = new Prisma.Decimal(params.priceMax)
+    }
+
+    filters.push({
+      price: priceFilter
+    })
   }
 
   if (params.inStock) {
-    filters.push('(variantInventory > 0 OR baseInventory > 0)')
+    filters.push({
+      OR: [
+        { inventory: { gt: 0 } },
+        {
+          variants: {
+            some: {
+              inventory: { gt: 0 }
+            }
+          }
+        }
+      ]
+    })
+  }
+
+  if (params.q?.trim()) {
+    const searchTerm = params.q.trim()
+    filters.push({
+      OR: [
+        { title: { contains: searchTerm, mode: 'insensitive' } },
+        { description: { contains: searchTerm, mode: 'insensitive' } },
+        {
+          variants: {
+            some: {
+              name: { contains: searchTerm, mode: 'insensitive' }
+            }
+          }
+        }
+      ]
+    })
   }
 
   return filters
 }
 
-function mapFacets(facets?: Record<string, Record<string, number>>) {
-  if (!facets) {
-    return {}
+function buildOrderBy(params: SearchParams): Prisma.ProductOrderByWithRelationInput[] {
+  switch (params.sort) {
+    case 'price_asc':
+      return [{ price: 'asc' }, { updatedAt: 'desc' }]
+    case 'price_desc':
+      return [{ price: 'desc' }, { updatedAt: 'desc' }]
+    case 'newest':
+      return [{ updatedAt: 'desc' }]
+    default:
+      return [{ updatedAt: 'desc' }]
   }
-
-  const transformed: Record<string, Array<{ value: string; count: number }>> = {}
-
-  for (const [facetName, values] of Object.entries(facets)) {
-    transformed[facetName] = Object.entries(values).map(([value, count]) => ({ value, count }))
-  }
-
-  return transformed
 }
 
-function mapHit(hit: MeiliHit) {
-  const variants = (hit.variants ?? []).map((variant) => ({
+function mapProduct(product: ProductWithRelations) {
+  const price = decimalToNumber(product.price) ?? 0
+  const variants = product.variants.map((variant) => ({
     id: variant.id,
     name: variant.name,
     sku: variant.sku ?? undefined,
-    price: variant.price ?? hit.price ?? 0,
+    price: decimalToNumber(variant.price) ?? price,
     inventory: variant.inventory ?? 0
   }))
 
-  const images = (hit.images ?? [])
+  const images = product.images
+    .slice()
     .sort((a, b) => a.position - b.position)
     .map((image) => ({
       url: image.url,
       alt: image.alt ?? ''
     }))
 
-  const availableInventory = (hit.baseInventory ?? 0) + (hit.variantInventory ?? 0)
+  const variantInventory = product.variants.reduce((sum, variant) => sum + (variant.inventory ?? 0), 0)
+  const baseInventory = product.inventory ?? 0
+  const availableInventory = baseInventory + variantInventory
 
   return {
-    id: hit.id,
-    slug: hit.slug ?? slugify(hit.title),
-    title: hit.title,
-    description: hit.description ?? '',
-    status: hit.status,
-    price: hit.price ?? 0,
-    compareAtPrice: hit.compareAtPrice ?? null,
+    id: product.id,
+    slug: slugify(product.title),
+    title: product.title,
+    description: product.description ?? '',
+    status: product.status,
+    price,
+    compareAtPrice: null,
     images,
     variants,
-    collections: hit.collections ?? [],
-    tags: hit.tags ?? [],
+    collections: product.collections
+      .map((assignment) => assignment.collection?.slug ?? assignment.collection?.name)
+      .filter((value): value is string => Boolean(value)),
+    tags: product.tags
+      .map((tagging) => tagging.tag?.name)
+      .filter((value): value is string => Boolean(value)),
     available: availableInventory > 0,
     inventory: {
       available: availableInventory,
       reserved: 0
     }
   }
+}
+
+async function buildFacets(prisma: ReturnType<typeof getPrisma>, filters: Prisma.ProductWhereInput[]) {
+  const productWhere: Prisma.ProductWhereInput = filters.length ? { AND: filters } : {}
+
+  const [collectionGroups, tagGroups] = await Promise.all([
+    prisma.productCollectionAssignment.groupBy({
+      by: ['collectionId'],
+      where: {
+        product: productWhere
+      },
+      _count: {
+        _all: true
+      }
+    }),
+    prisma.productTagging.groupBy({
+      by: ['tagId'],
+      where: {
+        product: productWhere
+      },
+      _count: {
+        _all: true
+      }
+    })
+  ])
+
+  const collectionIds = collectionGroups.map((group) => group.collectionId)
+  const tagIds = tagGroups.map((group) => group.tagId)
+
+  const [collections, tags] = await Promise.all([
+    collectionIds.length
+      ? prisma.productCollection.findMany({
+          where: { id: { in: collectionIds } },
+          select: { id: true, slug: true, name: true }
+        })
+      : Promise.resolve([] as Array<{ id: string; slug: string | null; name: string }>),
+    tagIds.length
+      ? prisma.productTag.findMany({
+          where: { id: { in: tagIds } },
+          select: { id: true, slug: true, name: true }
+        })
+      : Promise.resolve([] as Array<{ id: string; slug: string | null; name: string }>)
+  ])
+
+  const collectionMap = new Map(collections.map((collection) => [collection.id, collection]))
+  const tagMap = new Map(tags.map((tag) => [tag.id, tag]))
+
+  const collectionFacet: FacetValue[] = collectionGroups
+    .map((group) => {
+      const collection = collectionMap.get(group.collectionId)
+      if (!collection) {
+        return null
+      }
+
+      const value = collection.slug ?? collection.name
+      return { value, count: group._count._all }
+    })
+    .filter((item): item is FacetValue => item !== null)
+    .sort((a, b) => b.count - a.count)
+
+  const tagFacet: FacetValue[] = tagGroups
+    .map((group) => {
+      const tag = tagMap.get(group.tagId)
+      if (!tag) {
+        return null
+      }
+
+      return { value: tag.name, count: group._count._all }
+    })
+    .filter((item): item is FacetValue => item !== null)
+    .sort((a, b) => b.count - a.count)
+
+  const facets: FacetResult = {
+    collections: collectionFacet,
+    tags: tagFacet
+  }
+
+  return facets
 }
 
 export async function searchStorefrontProducts(env: EnvBindings, tenantSlug: string, params: SearchParams): Promise<StorefrontProductResponse> {
@@ -139,48 +306,48 @@ export async function searchStorefrontProducts(env: EnvBindings, tenantSlug: str
     throw new HTTPException(404, { message: 'Storefront not found' })
   }
 
-  let meili
-  try {
-    meili = getMeili(env)
-  } catch (error) {
-    throw new HTTPException(503, { message: 'Storefront search unavailable' })
-  }
-  const index = meili.index(`products_${tenant.id}`)
+  const filters = buildFilters(tenant.id, params)
+  const where: Prisma.ProductWhereInput = filters.length ? { AND: filters } : {}
+  const orderBy = buildOrderBy(params)
+  const skip = (params.page - 1) * params.pageSize
 
-  const filters = buildFilters(params)
-  const sort = (() => {
-    switch (params.sort) {
-      case 'price_asc':
-        return ['price:asc']
-      case 'price_desc':
-        return ['price:desc']
-      case 'newest':
-        return ['updatedAt:desc']
-      default:
-        return undefined
-    }
-  })()
+  const [products, total, facets] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      include: {
+        variants: true,
+        images: true,
+        tags: {
+          include: {
+            tag: true
+          }
+        },
+        collections: {
+          include: {
+            collection: true
+          }
+        }
+      },
+      orderBy,
+      skip,
+      take: params.pageSize
+    }),
+    prisma.product.count({ where }),
+    buildFacets(prisma, filters)
+  ])
 
-  const offset = (params.page - 1) * params.pageSize
-
-  const searchResult = await index.search<MeiliHit>(params.q ?? '', {
-    offset,
-    limit: params.pageSize,
-    filter: filters.length ? filters : undefined,
-    sort,
-    facets: ['collections', 'tags']
-  })
-
-  const total = searchResult.estimatedTotalHits ?? searchResult.hits.length
+  const data = products.map(mapProduct)
+  const hasNextPage = params.page * params.pageSize < total
 
   return {
-    data: searchResult.hits.map(mapHit),
+    data,
     meta: {
       page: params.page,
       pageSize: params.pageSize,
       total,
-      hasNextPage: params.page * params.pageSize < total,
-      facets: mapFacets(searchResult.facetDistribution)
+      hasNextPage,
+      facets
     }
   }
 }
+

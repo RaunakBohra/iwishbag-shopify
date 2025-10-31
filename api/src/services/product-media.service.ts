@@ -73,7 +73,7 @@ export async function listImages(env: EnvBindings, authUser: AuthUser, productId
 }
 
 interface AddImagePayload {
-  file: File
+  file: Blob
   alt?: string
 }
 
@@ -105,7 +105,8 @@ export async function addImage(env: EnvBindings, authUser: AuthUser, productId: 
     throw new HTTPException(409, { message: 'Image limit reached for current plan' })
   }
 
-  const objectKey = buildObjectKey(tenantId, productId, payload.file.name || 'image.bin')
+  const fileName = 'name' in payload.file && typeof payload.file.name === 'string' ? payload.file.name : 'image.bin'
+  const objectKey = buildObjectKey(tenantId, productId, fileName)
   const contentType = payload.file.type || 'application/octet-stream'
 
   await env.PRODUCT_MEDIA_BUCKET.put(objectKey, payload.file.stream(), {

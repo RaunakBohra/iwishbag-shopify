@@ -109,9 +109,33 @@ This ensures the UI doesn't break, but clearly indicates it's showing defaults.
 
 For detailed information, see `/docs/FRONTEND-BACKEND-AUDIT.md`
 
-## Checkout Telemetry & Validation TODOs
+## Checkout Telemetry Runbook
 
-- Better Stack: add a dashboard panel for `/public/v1/storefront/:tenant/cart/checkout` latency + error rates.
-- PostHog: capture events `storefront_checkout_started` and `storefront_checkout_confirmed` with session id and tenant slug.
-- Playwright: add E2E covering add-to-cart → checkout form submit → confirmation page polling.
-- DB migrations: ensure `20251024221500_cart_sessions_checkout` and `20251024230000_checkout_sessions` are deployed before enabling payments.
+Storefront checkout endpoints now emit structured telemetry each time a shopper moves through the funnel.
+
+### Better Stack Monitoring
+- Events `storefront.checkout.started`, `storefront.checkout.confirmed`, and `storefront.checkout.submitted` include `tenantSlug`, `checkoutSessionId`, `cartId`, and monetary totals.
+- Add a dashboard panel using the query `event:"storefront.checkout.*"` to watch for spikes in error responses or missing submissions.
+- Recommended alert: notify `#ops-checkout` if fewer than 5 `storefront.checkout.submitted` events occur within 30 minutes while `started` events exceed 20 (conversion drop).
+
+### PostHog Tracking
+- Events `storefront_checkout_started`, `storefront_checkout_confirmed`, and `storefront_checkout_submitted` are captured with `checkoutSessionId` as `distinct_id`, plus total amount, payment method, and tenant slug.
+- Create a funnel insight with those three events to track conversion. Segment by `tenantSlug` and `paymentMethod` to spot outliers.
+- For ad-hoc verification, run in the PostHog console:
+  ```sql
+  SELECT event, properties->>'checkoutSessionId', properties->>'tenantSlug'
+  FROM events
+  WHERE event IN ('storefront_checkout_started','storefront_checkout_submitted')
+  ORDER BY timestamp DESC LIMIT 20;
+  ```
+
+### Operations Checklist
+1. Ensure `BETTERSTACK_LOGS_TOKEN`, `BETTERSTACK_LOGS_ENDPOINT`, `POSTHOG_API_KEY`, and `POSTHOG_HOST` are populated in the API environment before deploying checkout.
+2. After each deploy, place a test order from the demo tenant and confirm one event of each type appears in Better Stack and PostHog.
+3. File an incident if `storefront.checkout.submitted` logs stop while `started` continues for more than 5 minutes—this indicates payment or inventory failures downstream.
+
+## QA & Testing
+
+- Seed demo fixtures locally with `npm run --workspace api seed:dev` (creates/updates tenant slug `demo-store`).
+- Run Vitest coverage for the API checkout routes: `cd api && set -a && source .env.dev && npx vitest run src/routes/__tests__/storefront-cart.routes.test.ts`.
+- Execute storefront Playwright flows with `PLAYWRIGHT_TENANT_SLUG=demo-store npm run --workspace frontend test:e2e`; the “completes cart checkout flow” spec exercises add-to-cart → checkout → confirmation.

@@ -38,9 +38,22 @@ vi.mock('../../lib/prisma', () => ({
   getPrisma: () => mockPrisma
 }))
 
+const tempStore = new Map<string, string>()
+
 const env = {
   SESSIONS: {} as any,
   RATE_LIMIT: {} as any,
+  TEMP: {
+    async put(key: string, value: string) {
+      tempStore.set(key, value)
+    },
+    async get(key: string) {
+      return tempStore.get(key) ?? null
+    },
+    async delete(key: string) {
+      tempStore.delete(key)
+    }
+  } as KVNamespace,
   PRODUCT_MEDIA_BUCKET: {} as any,
   PROOF_OF_DELIVERY_BUCKET: {} as any,
   BACKUPS_BUCKET: {} as any,
@@ -51,6 +64,7 @@ const env = {
 
 beforeEach(() => {
   vi.restoreAllMocks()
+  tempStore.clear()
 
   mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma))
 
@@ -106,6 +120,21 @@ describe('invite service', () => {
     const invite = await createInvite(env, authUser, { email: 'staff@example.com' })
     expect(invite.email).toBe('staff@example.com')
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalled()
+    expect(invite.token).toBeDefined()
+  })
+
+  it('throws 429 when staff limit reached', async () => {
+    mockPrisma.tenant.findUnique.mockResolvedValueOnce({
+      id: 'tenant-1',
+      plan: 'FREE',
+      usage: { staff: 1 }
+    })
+    mockPrisma.user.count.mockResolvedValueOnce(1)
+    mockPrisma.invite.count.mockResolvedValueOnce(0)
+
+    await expect(createInvite(env, authUser, { email: 'staff@example.com' })).rejects.toMatchObject({
+      status: 429
+    })
   })
 
   it('revokes invite and decrements usage', async () => {

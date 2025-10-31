@@ -47,75 +47,52 @@ This is a standard, must-have feature for any modern e-commerce platform and a m
 
 ## 3. Technical Implementation
 
-This feature will heavily leverage the capabilities of our chosen search engine, **MeiliSearch**.
+This feature relies on Prisma-powered queries against Postgres rather than an external search engine. Catalog data stays inside the primary database, and we project facets with aggregate queries.
 
-### 3.1. Backend (Indexing)
+### 3.1. Backend (Data Shape & Indexes)
 
-- **Update MeiliSearch Indexing:** When a product is created or updated, we will send a more detailed data structure to MeiliSearch.
-- **Mark Filterable Attributes:** In the MeiliSearch index settings, we must explicitly define which attributes are `filterableAttributes`.
-
-```typescript
-// Example of updating MeiliSearch index settings
-import { MeiliSearch } from 'meilisearch'
-
-const client = new MeiliSearch({ host: '...', apiKey: '...' });
-const index = client.index('products_tenant_xyz');
-
-await index.updateFilterableAttributes([
-  'price',
-  'vendor',
-  'product_type',
-  'tags',
-  'options.Size', // Facet by specific options
-  'options.Color'
-]);
-```
-
-- **Product Data Structure for Indexing:**
-
-```json
-{
-  "id": "prod_123",
-  "title": "Stylish Cotton T-Shirt",
-  "vendor": "Nepali Threads",
-  "product_type": "Apparel",
-  "price": 1200,
-  "tags": ["casual", "summer", "cotton"],
-  "options": {
-    "Color": ["Red", "Blue", "Black"],
-    "Size": ["S", "M", "L"]
-  }
-}
-```
+- Ensure product relations (`ProductTag`, `ProductCollectionAssignment`, variants) remain in sync through existing services.
+- Add composite indexes that support the most common filters (`ProductTagging` on `(productId, tagId)`, `ProductCollectionAssignment` on `(collectionId, productId)`), already present in the Prisma schema.
+- Inventory totals come from the catalog worker so storefront responses can surface `available` quantity without recomputing inside the request.
+- Optional enhancement: add a `GIN` index with `to_tsvector('simple', title || ' ' || coalesce(description, ''))` if we need better full-text matching. For now we use case-insensitive `contains` filters which already perform well under Neon scale tiers.
 
 ### 3.2. Backend (API)
 
-- **New Search Endpoint:** A new API endpoint, `/api/search`, will be created to handle faceted search queries.
-- **Facet Distribution:** The API will use MeiliSearch's `facets` search parameter to get the list of available filters and their counts along with the product results.
+- The existing `/v1/storefront/:tenantSlug/products` route calls `searchStorefrontProducts`.
+- We build a Prisma `where` clause composed of:
+  - `tenantId`, `status = ACTIVE`, `deletedAt = null`
+  - Optional `contains` filters for `title`, `description`, variant names
+  - Join filters for tags (`tags.some.tag.name`) and collections (`collections.some.collection.slug`)
+  - Numeric comparisons for `price` plus stock checks using variant aggregates.
+- Facets are computed via `groupBy` on `productCollectionAssignment` and `productTagging` tables, and then hydrated with human-readable labels.
 
 ```typescript
-// Example API call to MeiliSearch
-app.post('/api/search', async (c) => {
-  const { query, filters, facets } = await c.req.json();
-  
-  const searchResults = await meiliSearchIndex.search(query, {
-    filter: filters, // e.g., ['vendor = "Nepali Threads"', 'price 1000 TO 1500']
-    facets: facets, // e.g., ['vendor', 'options.Color', 'price']
-  });
+const filters = buildFilters(tenant.id, params)
+const where = filters.length ? { AND: filters } : {}
 
-  // The response will contain `hits` (products) and `facetDistribution` (filter options and counts)
-  return c.json(searchResults);
-});
+const [products, total, facets] = await Promise.all([
+  prisma.product.findMany({
+    where,
+    include: { variants: true, images: true, tags: { include: { tag: true } }, collections: { include: { collection: true } } },
+    orderBy: buildOrderBy(params),
+    skip: (params.page - 1) * params.pageSize,
+    take: params.pageSize
+  }),
+  prisma.product.count({ where }),
+  buildFacets(prisma, filters)
+])
 ```
+
+- The response mirrors Shopify-style storefront payloads: `data` with mapped products and `meta.facets.collections/tags`, plus pagination info.
 
 ### 3.3. Frontend (Storefront)
 
-- **State Management:** The search page will use a state management solution (like Zustand or React's `useReducer`) to manage the active filters.
-- **API Calls:** A debounced `useEffect` hook will trigger an API call to the `/api/search` endpoint whenever the filters or search query change.
+- **State Management:** Continue to use a local store (Zustand or `useReducer`) for active filters.
+- **API Calls:** Debounce requests to `/v1/storefront/:tenantSlug/products`, passing query params such as `tags[]=cotton` and `collection=summer`.
 - **UI Components:**
-  - `FilterSidebar.tsx`: Renders the `facetDistribution` data from the API.
-  - `ProductGrid.tsx`: Renders the `hits` (products).
-  - `ActiveFilters.tsx`: Displays the currently selected filters.
+  - `FilterSidebar.tsx`: Renders `meta.facets.collections` and `meta.facets.tags`.
+  - `PriceSlider.tsx`: Binds to `priceMin`/`priceMax`.
+  - `ActiveFilters.tsx`: Shows applied filters using the same payload shape returned by the API.
 
 ---
 

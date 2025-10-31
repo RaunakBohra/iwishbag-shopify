@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { describe, it, expect, afterAll } from 'vitest'
+import { describe, it, expect, afterAll, beforeAll } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import type { EnvBindings, AuthUser } from '../../types'
 import { getOnboardingStatus, upsertOnboardingStep } from '../onboarding.service'

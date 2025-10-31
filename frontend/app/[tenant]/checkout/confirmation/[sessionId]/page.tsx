@@ -29,6 +29,7 @@ export default function CheckoutConfirmationPage() {
   const [error, setError] = useState<string | null>(null)
   const [polling, setPolling] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const rateLimited = typeof error === 'string' && /too many attempts/i.test(error)
 
   useEffect(() => {
     let active = true
@@ -122,6 +123,7 @@ export default function CheckoutConfirmationPage() {
 
   const handleCompletePayment = async () => {
     if (!tenantSlug || !sessionId) return
+    if (rateLimited) return
     setProcessing(true)
     setError(null)
     try {
@@ -137,7 +139,12 @@ export default function CheckoutConfirmationPage() {
         setSession(refreshed)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to complete payment')
+      const message = err instanceof Error ? err.message : 'Unable to complete payment'
+      if (/too many attempts/i.test(message)) {
+        setError('Too many attempts. Please wait a minute before trying again.')
+      } else {
+        setError(message)
+      }
     } finally {
       setProcessing(false)
     }
@@ -206,16 +213,33 @@ export default function CheckoutConfirmationPage() {
                       • Gift cards: -{formatCurrency(summary.breakdown.discounts.giftCards, summary.currency)}
                     </span>
                   ) : null}
+                  {summary.breakdown.shipping.discount > 0 ? (
+                    <span>
+                      • Shipping discount: -{formatCurrency(summary.breakdown.shipping.discount, summary.currency)}
+                    </span>
+                  ) : null}
                 </div>
               ) : null}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                 <span>Shipping</span>
                 <span>{formatCurrency(summary.shippingTotal, summary.currency)}</span>
               </div>
+              {summary.breakdown?.shipping.original !== null &&
+              summary.breakdown?.shipping.original !== undefined &&
+              summary.breakdown.shipping.original > summary.shippingTotal ? (
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Original shipping {formatCurrency(summary.breakdown.shipping.original, summary.currency)}
+                </span>
+              ) : null}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                 <span>Tax</span>
                 <span>{formatCurrency(summary.taxTotal, summary.currency)}</span>
               </div>
+              {summary.breakdown?.tax.rate ? (
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Estimated tax rate {summary.breakdown.tax.rate.toFixed(2)}%
+                </span>
+              ) : null}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
                 <span>Total</span>
                 <span>{formatCurrency(summary.total, summary.currency)}</span>
@@ -267,18 +291,18 @@ export default function CheckoutConfirmationPage() {
                 <button
                   type="button"
                   onClick={handleCompletePayment}
-                  disabled={processing}
+                  disabled={processing || rateLimited}
                   style={{
                     border: 'none',
                     borderRadius: '999px',
                     padding: '0.85rem 1rem',
-                    background: processing ? '#94a3b8' : '#16a34a',
+                    background: processing || rateLimited ? '#94a3b8' : '#16a34a',
                     color: '#fff',
                     fontWeight: 600,
-                    cursor: processing ? 'not-allowed' : 'pointer'
+                    cursor: processing || rateLimited ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {processing ? 'Processing…' : 'Complete payment'}
+                  {processing ? 'Processing…' : rateLimited ? 'Try again shortly' : 'Complete payment'}
                 </button>
               ) : null}
             </div>

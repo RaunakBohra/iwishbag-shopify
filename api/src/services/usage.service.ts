@@ -7,6 +7,8 @@ type UsageDelta = {
   products?: number
   variants?: number
   images?: number
+  orders?: number
+  inventoryAdjustments?: number
 }
 
 function clamp(value: number) {
@@ -14,7 +16,13 @@ function clamp(value: number) {
 }
 
 function hasDelta(delta: UsageDelta) {
-  return delta.products !== undefined || delta.variants !== undefined || delta.images !== undefined
+  return (
+    delta.products !== undefined ||
+    delta.variants !== undefined ||
+    delta.images !== undefined ||
+    delta.orders !== undefined ||
+    delta.inventoryAdjustments !== undefined
+  )
 }
 
 export async function applyUsageDelta(tx: Prisma.TransactionClient, tenantId: string, delta: UsageDelta) {
@@ -27,7 +35,9 @@ export async function applyUsageDelta(tx: Prisma.TransactionClient, tenantId: st
     select: {
       products: true,
       variants: true,
-      images: true
+      images: true,
+      orders: true,
+      inventoryAdjustments: true
     }
   })
 
@@ -47,6 +57,14 @@ export async function applyUsageDelta(tx: Prisma.TransactionClient, tenantId: st
 
   if (delta.images !== undefined) {
     data.images = clamp(usage.images + delta.images)
+  }
+
+  if (delta.orders !== undefined) {
+    data.orders = clamp(usage.orders + delta.orders)
+  }
+
+  if (delta.inventoryAdjustments !== undefined) {
+    data.inventoryAdjustments = clamp(usage.inventoryAdjustments + delta.inventoryAdjustments)
   }
 
   if (Object.keys(data).length === 0) {

@@ -1,0 +1,287 @@
+.cartOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 1900;
+}
+
+.cartOverlayOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cartDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 92vw);
+  transform: translateX(110%);
+  transition: transform 0.25s ease-in-out;
+  background: #ffffff;
+  box-shadow: -24px 0 65px rgba(15, 23, 42, 0.18);
+  padding: 1.75rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 2000;
+}
+
+.cartDrawerOpen {
+  transform: translateX(0);
+}
+
+.drawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.drawerTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.drawerClose {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: #475569;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.drawerClose:hover {
+  color: #0f172a;
+}
+
+.drawerBody {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  margin-right: -0.35rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.emptyState {
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.cartItems {
+  list-style: none;
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+}
+
+.cartItem {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem;
+  display: grid;
+  gap: 0.5rem;
+  background: #f8fafc;
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.itemTitle {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.itemSku {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.removeButton {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.removeButton:hover {
+  color: #b91c1c;
+}
+
+.itemControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.quantityInput {
+  margin-left: 0.5rem;
+  width: 4rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #cbd5f5;
+  font-size: 0.9rem;
+}
+
+.lineSubtotal {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.drawerFooter {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.25rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.summaryRowTotal {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.discountBreakdown {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: grid;
+  gap: 0.15rem;
+  margin-left: 0.2rem;
+}
+
+.muted {
+  color: #94a3b8;
+}
+
+.drawerButton {
+  border-radius: 999px;
+  padding: 0.85rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.drawerButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(14, 165, 233, 0.25);
+}
+
+.drawerButtonSecondary {
+  border: 1px solid #94a3b8;
+  background: transparent;
+  color: #475569;
+}
+
+.drawerButtonPrimary {
+  border: none;
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.drawerButtonCritical {
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.drawerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
+.drawerNotice {
+  font-size: 0.8rem;
+  color: #10b981;
+}
+
+.drawerError {
+  font-size: 0.85rem;
+  color: #ef4444;
+}
+
+.toggleButton {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  border-radius: 999px;
+  padding: 0.85rem 1.2rem;
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 18px 45px rgba(14, 165, 233, 0.35);
+  z-index: 1500;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.toggleButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+.toggleButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.toggleBadge {
+  margin-left: 0.35rem;
+  background: rgba(15, 23, 42, 0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.loadingSpinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: cartSpin 0.8s linear infinite;
+  display: inline-block;
+  margin-left: 0.35rem;
+}
+
+@keyframes cartSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .cartDrawer {
+    width: 100vw;
+  }
+
+  .toggleButton {
+    bottom: 1.25rem;
+    right: 1.25rem;
+  }
+}

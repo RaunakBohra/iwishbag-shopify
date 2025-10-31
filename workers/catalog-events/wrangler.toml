@@ -12,7 +12,3 @@ max_batch_timeout = 5
 [[queues.producers]]
 binding = "CATALOG_EVENTS_DLQ"
 queue = "catalog-events-dlq"
-
-[vars]
-MEILISEARCH_URL = ""
-MEILISEARCH_KEY = ""

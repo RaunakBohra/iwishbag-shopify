@@ -1,0 +1,708 @@
+0 verbose cli /usr/local/bin/node /usr/local/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 info config found workspace root at /Users/raunakbohra/Desktop/iwishbag-shopify
+5 silly config load:file:/Users/raunakbohra/Desktop/iwishbag-shopify/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm install
+8 verbose argv "install"
+9 verbose logfile logs-max:10 dir:/Users/raunakbohra/Desktop/iwishbag-shopify/.npm/_logs/2025-10-19T04_06_09_100Z-
+10 verbose logfile /Users/raunakbohra/Desktop/iwishbag-shopify/.npm/_logs/2025-10-19T04_06_09_100Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 verbose shrinkwrap failed to load node_modules/.package-lock.json out of date, updated: frontend
+14 silly idealTree buildDeps
+15 silly reify moves {}
+16 silly audit bulk request {
+16 silly audit   'iwishbag-store-api': [ '0.1.0' ],
+16 silly audit   '@cloudflare/kv-asset-handler': [ '0.4.0' ],
+16 silly audit   '@cloudflare/unenv-preset': [ '2.7.7' ],
+16 silly audit   '@cloudflare/workerd-darwin-64': [ '1.20251008.0' ],
+16 silly audit   '@cloudflare/workerd-darwin-arm64': [ '1.20251008.0' ],
+16 silly audit   '@cloudflare/workerd-linux-64': [ '1.20251008.0' ],
+16 silly audit   '@cloudflare/workerd-linux-arm64': [ '1.20251008.0' ],
+16 silly audit   '@cloudflare/workerd-windows-64': [ '1.20251008.0' ],
+16 silly audit   '@cloudflare/workers-types': [ '4.20251011.0' ],
+16 silly audit   '@cspotcode/source-map-support': [ '0.8.1' ],
+16 silly audit   '@emnapi/runtime': [ '1.5.0' ],
+16 silly audit   '@esbuild/aix-ppc64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/android-arm': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/android-arm64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/android-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/darwin-arm64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/darwin-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/freebsd-arm64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/freebsd-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-arm': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-arm64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-ia32': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-loong64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-mips64el': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-ppc64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-riscv64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-s390x': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/linux-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/netbsd-arm64': [ '0.25.4' ],
+16 silly audit   '@esbuild/netbsd-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/openbsd-arm64': [ '0.25.4' ],
+16 silly audit   '@esbuild/openbsd-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/sunos-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/win32-arm64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/win32-ia32': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@esbuild/win32-x64': [ '0.21.5', '0.25.4' ],
+16 silly audit   '@hono/zod-validator': [ '0.2.2' ],
+16 silly audit   '@img/sharp-darwin-arm64': [ '0.33.5' ],
+16 silly audit   '@img/sharp-darwin-x64': [ '0.33.5' ],
+16 silly audit   '@img/sharp-libvips-darwin-arm64': [ '1.0.4' ],
+16 silly audit   '@img/sharp-libvips-darwin-x64': [ '1.0.4' ],
+16 silly audit   '@img/sharp-libvips-linux-arm': [ '1.0.5' ],
+16 silly audit   '@img/sharp-libvips-linux-arm64': [ '1.0.4' ],
+16 silly audit   '@img/sharp-libvips-linux-s390x': [ '1.0.4' ],
+16 silly audit   '@img/sharp-libvips-linux-x64': [ '1.0.4' ],
+16 silly audit   '@img/sharp-libvips-linuxmusl-arm64': [ '1.0.4' ],
+16 silly audit   '@img/sharp-libvips-linuxmusl-x64': [ '1.0.4' ],
+16 silly audit   '@img/sharp-linux-arm': [ '0.33.5' ],
+16 silly audit   '@img/sharp-linux-arm64': [ '0.33.5' ],
+16 silly audit   '@img/sharp-linux-s390x': [ '0.33.5' ],
+16 silly audit   '@img/sharp-linux-x64': [ '0.33.5' ],
+16 silly audit   '@img/sharp-linuxmusl-arm64': [ '0.33.5' ],
+16 silly audit   '@img/sharp-linuxmusl-x64': [ '0.33.5' ],
+16 silly audit   '@img/sharp-wasm32': [ '0.33.5' ],
+16 silly audit   '@img/sharp-win32-ia32': [ '0.33.5' ],
+16 silly audit   '@img/sharp-win32-x64': [ '0.33.5' ],
+16 silly audit   'ansi-styles': [ '5.2.0' ],
+16 silly audit   '@jest/schemas': [ '29.6.3' ],
+16 silly audit   '@jridgewell/trace-mapping': [ '0.3.9' ],
+16 silly audit   '@jridgewell/resolve-uri': [ '3.1.2' ],
+16 silly audit   '@jridgewell/sourcemap-codec': [ '1.5.5' ],
+16 silly audit   '@neondatabase/serverless': [ '0.10.4' ],
+16 silly audit   '@poppinss/colors': [ '4.1.5' ],
+16 silly audit   '@poppinss/dumper': [ '0.6.4' ],
+16 silly audit   'supports-color': [ '10.2.2' ],
+16 silly audit   '@poppinss/exception': [ '1.2.2' ],
+16 silly audit   '@prisma/adapter-neon': [ '5.22.0' ],
+16 silly audit   '@prisma/client': [ '5.22.0' ],
+16 silly audit   '@prisma/debug': [ '5.22.0' ],
+16 silly audit   '@prisma/driver-adapter-utils': [ '5.22.0' ],
+16 silly audit   '@prisma/engines': [ '5.22.0' ],
+16 silly audit   '@prisma/engines-version': [ '5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2' ],
+16 silly audit   '@prisma/extension-accelerate': [ '1.3.0' ],
+16 silly audit   '@prisma/fetch-engine': [ '5.22.0' ],
+16 silly audit   '@prisma/get-platform': [ '5.22.0' ],
+16 silly audit   '@rollup/rollup-android-arm-eabi': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-android-arm64': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-darwin-arm64': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-darwin-x64': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-freebsd-arm64': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-freebsd-x64': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-arm-gnueabihf': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-arm-musleabihf': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-arm64-gnu': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-arm64-musl': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-loong64-gnu': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-ppc64-gnu': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-riscv64-gnu': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-riscv64-musl': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-s390x-gnu': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-x64-gnu': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-linux-x64-musl': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-openharmony-arm64': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-win32-arm64-msvc': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-win32-ia32-msvc': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-win32-x64-gnu': [ '4.52.4' ],
+16 silly audit   '@rollup/rollup-win32-x64-msvc': [ '4.52.4' ],
+16 silly audit   '@sinclair/typebox': [ '0.27.8' ],
+16 silly audit   '@sindresorhus/is': [ '7.1.0' ],
+16 silly audit   '@speed-highlight/core': [ '1.2.7' ],
+16 silly audit   '@types/bcryptjs': [ '2.4.6' ],
+16 silly audit   '@types/estree': [ '1.0.8' ],
+16 silly audit   '@types/node': [ '20.19.21' ],
+16 silly audit   '@types/pg': [ '8.11.6' ],
+16 silly audit   '@vitest/expect': [ '1.6.1' ],
+16 silly audit   '@vitest/runner': [ '1.6.1' ],
+16 silly audit   pathe: [ '1.1.2', '2.0.3' ],
+16 silly audit   '@vitest/snapshot': [ '1.6.1' ],
+16 silly audit   'magic-string': [ '0.30.19' ],
+16 silly audit   '@vitest/spy': [ '1.6.1' ],
+16 silly audit   '@vitest/utils': [ '1.6.1' ],
+16 silly audit   'estree-walker': [ '3.0.3' ],
+16 silly audit   acorn: [ '8.14.0', '8.15.0' ],
+16 silly audit   'acorn-walk': [ '8.3.2' ],
+16 silly audit   'assertion-error': [ '1.1.0' ],
+16 silly audit   bcryptjs: [ '2.4.3' ],
+16 silly audit   'blake3-wasm': [ '2.1.5' ],
+16 silly audit   cac: [ '6.7.14' ],
+16 silly audit   chai: [ '4.5.0' ],
+16 silly audit   'check-error': [ '1.0.3' ],
+16 silly audit   color: [ '4.2.3' ],
+16 silly audit   'color-convert': [ '2.0.1' ],
+16 silly audit   'color-name': [ '1.1.4' ],
+16 silly audit   'color-string': [ '1.9.1' ],
+16 silly audit   confbox: [ '0.1.8' ],
+16 silly audit   cookie: [ '1.0.2' ],
+16 silly audit   'cross-spawn': [ '7.0.6' ],
+16 silly audit   debug: [ '4.4.3' ],
+16 silly audit   'deep-eql': [ '4.1.4' ],
+16 silly audit   defu: [ '6.1.4' ],
+16 silly audit   'detect-libc': [ '2.1.2' ],
+16 silly audit   'diff-sequences': [ '29.6.3' ],
+16 silly audit   dotenv: [ '16.6.1' ],
+16 silly audit   'error-stack-parser-es': [ '1.0.5' ],
+16 silly audit   esbuild: [ '0.21.5', '0.25.4' ],
+16 silly audit   semver: [ '7.7.3' ],
+16 silly audit   execa: [ '8.0.1' ],
+16 silly audit   'exit-hook': [ '2.2.1' ],
+16 silly audit   exsolve: [ '1.0.7' ],
+16 silly audit   fsevents: [ '2.3.3' ],
+16 silly audit   'get-func-name': [ '2.0.2' ],
+16 silly audit   'get-stream': [ '8.0.1' ],
+16 silly audit   'glob-to-regexp': [ '0.4.1' ],
+16 silly audit   hono: [ '4.9.12' ],
+16 silly audit   'human-signals': [ '5.0.0' ],
+16 silly audit   'is-arrayish': [ '0.3.4' ],
+16 silly audit   'is-stream': [ '3.0.0' ],
+16 silly audit   isexe: [ '2.0.0' ],
+16 silly audit   jose: [ '5.10.0' ],
+16 silly audit   'js-tokens': [ '9.0.1' ],
+16 silly audit   kleur: [ '4.1.5' ],
+16 silly audit   'local-pkg': [ '0.5.1' ],
+16 silly audit   loupe: [ '2.3.7' ],
+16 silly audit   'merge-stream': [ '2.0.0' ],
+16 silly audit   mime: [ '3.0.0' ],
+16 silly audit   'mimic-fn': [ '4.0.0' ],
+16 silly audit   miniflare: [ '4.20251008.0' ],
+16 silly audit   zod: [ '3.22.3', '3.25.76' ],
+16 silly audit   mlly: [ '1.8.0' ],
+16 silly audit   ms: [ '2.1.3' ],
+16 silly audit   nanoid: [ '3.3.11' ],
+16 silly audit   postcss: [ '8.5.6' ],
+16 silly audit   'npm-run-path': [ '5.3.0' ],
+16 silly audit   'path-key': [ '4.0.0', '3.1.1' ],
+16 silly audit   obuf: [ '1.1.2' ],
+16 silly audit   ohash: [ '2.0.11' ],
+16 silly audit   onetime: [ '6.0.0' ],
+16 silly audit   'p-limit': [ '5.0.0' ],
+16 silly audit   'yocto-queue': [ '1.2.1' ],
+16 silly audit   'path-to-regexp': [ '6.3.0' ],
+16 silly audit   pathval: [ '1.1.1' ],
+16 silly audit   'pg-int8': [ '1.0.1' ],
+16 silly audit   'pg-numeric': [ '1.0.2' ],
+16 silly audit   'pg-protocol': [ '1.10.3' ],
+16 silly audit   'pg-types': [ '4.1.0' ],
+16 silly audit   picocolors: [ '1.1.1' ],
+16 silly audit   'pkg-types': [ '1.3.1' ],
+16 silly audit   'postgres-array': [ '3.0.2' ],
+16 silly audit   'postgres-bytea': [ '3.0.0' ],
+16 silly audit   'postgres-date': [ '2.1.0' ],
+16 silly audit   'postgres-interval': [ '3.0.0' ],
+16 silly audit   'postgres-range': [ '1.1.4' ],
+16 silly audit   'pretty-format': [ '29.7.0' ],
+16 silly audit   prisma: [ '5.22.0' ],
+16 silly audit   'react-is': [ '18.3.1' ],
+16 silly audit   rollup: [ '4.52.4' ],
+16 silly audit   sharp: [ '0.33.5' ],
+16 silly audit   'shebang-command': [ '2.0.0' ],
+16 silly audit   'shebang-regex': [ '3.0.0' ],
+16 silly audit   siginfo: [ '2.0.0' ],
+16 silly audit   'signal-exit': [ '4.1.0' ],
+16 silly audit   'simple-swizzle': [ '0.2.4' ],
+16 silly audit   'source-map-js': [ '1.2.1' ],
+16 silly audit   stackback: [ '0.0.2' ],
+16 silly audit   'std-env': [ '3.10.0' ],
+16 silly audit   stoppable: [ '1.1.0' ],
+16 silly audit   'strip-final-newline': [ '3.0.0' ],
+16 silly audit   'strip-literal': [ '2.1.1' ],
+16 silly audit   tinybench: [ '2.9.0' ],
+16 silly audit   tinypool: [ '0.8.4' ],
+16 silly audit   tinyspy: [ '2.2.1' ],
+16 silly audit   tslib: [ '2.8.1' ],
+16 silly audit   'type-detect': [ '4.1.0' ],
+16 silly audit   typescript: [ '5.9.3' ],
+16 silly audit   ufo: [ '1.6.1' ],
+16 silly audit   undici: [ '7.14.0' ],
+16 silly audit   'undici-types': [ '6.21.0' ],
+16 silly audit   unenv: [ '2.0.0-rc.21' ],
+16 silly audit   vite: [ '5.4.20' ],
+16 silly audit   'vite-node': [ '1.6.1' ],
+16 silly audit   vitest: [ '1.6.1' ],
+16 silly audit   which: [ '2.0.2' ],
+16 silly audit   'why-is-node-running': [ '2.3.0' ],
+16 silly audit   workerd: [ '1.20251008.0' ],
+16 silly audit   wrangler: [ '4.43.0' ],
+16 silly audit   youch: [ '4.1.0-beta.10' ],
+16 silly audit   ws: [ '8.18.0' ],
+16 silly audit   'youch-core': [ '0.3.3' ]
+16 silly audit }
+17 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-x64-msvc
+18 silly reify mark deleted [
+18 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-x64-msvc'
+18 silly reify ]
+19 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-x64-gnu
+20 silly reify mark deleted [
+20 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-x64-gnu'
+20 silly reify ]
+21 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-ia32-msvc
+22 silly reify mark deleted [
+22 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-ia32-msvc'
+22 silly reify ]
+23 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-arm64-msvc
+24 silly reify mark deleted [
+24 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-win32-arm64-msvc'
+24 silly reify ]
+25 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-openharmony-arm64
+26 silly reify mark deleted [
+26 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-openharmony-arm64'
+26 silly reify ]
+27 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-x64-musl
+28 silly reify mark deleted [
+28 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-x64-musl'
+28 silly reify ]
+29 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-x64-gnu
+30 silly reify mark deleted [
+30 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-x64-gnu'
+30 silly reify ]
+31 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-s390x-gnu
+32 silly reify mark deleted [
+32 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-s390x-gnu'
+32 silly reify ]
+33 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-riscv64-musl
+34 silly reify mark deleted [
+34 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-riscv64-musl'
+34 silly reify ]
+35 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-riscv64-gnu
+36 silly reify mark deleted [
+36 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-riscv64-gnu'
+36 silly reify ]
+37 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-ppc64-gnu
+38 silly reify mark deleted [
+38 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-ppc64-gnu'
+38 silly reify ]
+39 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-loong64-gnu
+40 silly reify mark deleted [
+40 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-loong64-gnu'
+40 silly reify ]
+41 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm64-musl
+42 silly reify mark deleted [
+42 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm64-musl'
+42 silly reify ]
+43 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm64-gnu
+44 silly reify mark deleted [
+44 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm64-gnu'
+44 silly reify ]
+45 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm-musleabihf
+46 silly reify mark deleted [
+46 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm-musleabihf'
+46 silly reify ]
+47 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm-gnueabihf
+48 silly reify mark deleted [
+48 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-linux-arm-gnueabihf'
+48 silly reify ]
+49 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-freebsd-x64
+50 silly reify mark deleted [
+50 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-freebsd-x64'
+50 silly reify ]
+51 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-freebsd-arm64
+52 silly reify mark deleted [
+52 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-freebsd-arm64'
+52 silly reify ]
+53 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-darwin-x64
+54 silly reify mark deleted [
+54 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-darwin-x64'
+54 silly reify ]
+55 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-android-arm64
+56 silly reify mark deleted [
+56 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-android-arm64'
+56 silly reify ]
+57 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-android-arm-eabi
+58 silly reify mark deleted [
+58 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@rollup/rollup-android-arm-eabi'
+58 silly reify ]
+59 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-win32-x64
+60 silly reify mark deleted [
+60 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-win32-x64'
+60 silly reify ]
+61 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-win32-ia32
+62 silly reify mark deleted [
+62 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-win32-ia32'
+62 silly reify ]
+63 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-wasm32
+64 silly reify mark deleted [
+64 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-wasm32'
+64 silly reify ]
+65 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linuxmusl-x64
+66 silly reify mark deleted [
+66 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linuxmusl-x64'
+66 silly reify ]
+67 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linuxmusl-arm64
+68 silly reify mark deleted [
+68 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linuxmusl-arm64'
+68 silly reify ]
+69 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-x64
+70 silly reify mark deleted [
+70 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-x64'
+70 silly reify ]
+71 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-s390x
+72 silly reify mark deleted [
+72 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-s390x'
+72 silly reify ]
+73 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-arm64
+74 silly reify mark deleted [
+74 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-arm64'
+74 silly reify ]
+75 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-arm
+76 silly reify mark deleted [
+76 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-linux-arm'
+76 silly reify ]
+77 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linuxmusl-x64
+78 silly reify mark deleted [
+78 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linuxmusl-x64'
+78 silly reify ]
+79 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linuxmusl-arm64
+80 silly reify mark deleted [
+80 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linuxmusl-arm64'
+80 silly reify ]
+81 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-x64
+82 silly reify mark deleted [
+82 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-x64'
+82 silly reify ]
+83 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-s390x
+84 silly reify mark deleted [
+84 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-s390x'
+84 silly reify ]
+85 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-arm64
+86 silly reify mark deleted [
+86 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-arm64'
+86 silly reify ]
+87 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-arm
+88 silly reify mark deleted [
+88 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-linux-arm'
+88 silly reify ]
+89 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-darwin-x64
+90 silly reify mark deleted [
+90 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-libvips-darwin-x64'
+90 silly reify ]
+91 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-darwin-x64
+92 silly reify mark deleted [
+92 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@img/sharp-darwin-x64'
+92 silly reify ]
+93 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@esbuild/openbsd-arm64
+94 silly reify mark deleted [
+94 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@esbuild/openbsd-arm64'
+94 silly reify ]
+95 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@esbuild/netbsd-arm64
+96 silly reify mark deleted [
+96 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@esbuild/netbsd-arm64'
+96 silly reify ]
+97 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@esbuild/aix-ppc64
+98 silly reify mark deleted [
+98 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/@esbuild/aix-ppc64'
+98 silly reify ]
+99 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/win32-x64
+100 silly reify mark deleted [
+100 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/win32-x64'
+100 silly reify ]
+101 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/win32-ia32
+102 silly reify mark deleted [
+102 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/win32-ia32'
+102 silly reify ]
+103 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/win32-arm64
+104 silly reify mark deleted [
+104 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/win32-arm64'
+104 silly reify ]
+105 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/sunos-x64
+106 silly reify mark deleted [
+106 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/sunos-x64'
+106 silly reify ]
+107 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/openbsd-x64
+108 silly reify mark deleted [
+108 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/openbsd-x64'
+108 silly reify ]
+109 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/netbsd-x64
+110 silly reify mark deleted [
+110 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/netbsd-x64'
+110 silly reify ]
+111 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-x64
+112 silly reify mark deleted [
+112 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-x64'
+112 silly reify ]
+113 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-s390x
+114 silly reify mark deleted [
+114 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-s390x'
+114 silly reify ]
+115 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-riscv64
+116 silly reify mark deleted [
+116 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-riscv64'
+116 silly reify ]
+117 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-ppc64
+118 silly reify mark deleted [
+118 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-ppc64'
+118 silly reify ]
+119 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-mips64el
+120 silly reify mark deleted [
+120 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-mips64el'
+120 silly reify ]
+121 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-loong64
+122 silly reify mark deleted [
+122 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-loong64'
+122 silly reify ]
+123 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-ia32
+124 silly reify mark deleted [
+124 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-ia32'
+124 silly reify ]
+125 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-arm64
+126 silly reify mark deleted [
+126 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-arm64'
+126 silly reify ]
+127 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-arm
+128 silly reify mark deleted [
+128 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/linux-arm'
+128 silly reify ]
+129 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/freebsd-x64
+130 silly reify mark deleted [
+130 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/freebsd-x64'
+130 silly reify ]
+131 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/freebsd-arm64
+132 silly reify mark deleted [
+132 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/freebsd-arm64'
+132 silly reify ]
+133 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/darwin-x64
+134 silly reify mark deleted [
+134 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/darwin-x64'
+134 silly reify ]
+135 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/android-x64
+136 silly reify mark deleted [
+136 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/android-x64'
+136 silly reify ]
+137 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/android-arm64
+138 silly reify mark deleted [
+138 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/android-arm64'
+138 silly reify ]
+139 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/android-arm
+140 silly reify mark deleted [
+140 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/android-arm'
+140 silly reify ]
+141 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/aix-ppc64
+142 silly reify mark deleted [
+142 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@esbuild/aix-ppc64'
+142 silly reify ]
+143 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-windows-64
+144 silly reify mark deleted [
+144 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-windows-64'
+144 silly reify ]
+145 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-arm64
+146 silly reify mark deleted [
+146 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-arm64'
+146 silly reify ]
+147 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-64
+148 silly reify mark deleted [
+148 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-64'
+148 silly reify ]
+149 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-darwin-64
+150 silly reify mark deleted [
+150 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/wrangler/node_modules/@cloudflare/workerd-darwin-64'
+150 silly reify ]
+151 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/win32-x64
+152 silly reify mark deleted [
+152 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/win32-x64'
+152 silly reify ]
+153 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/win32-ia32
+154 silly reify mark deleted [
+154 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/win32-ia32'
+154 silly reify ]
+155 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/win32-arm64
+156 silly reify mark deleted [
+156 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/win32-arm64'
+156 silly reify ]
+157 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/sunos-x64
+158 silly reify mark deleted [
+158 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/sunos-x64'
+158 silly reify ]
+159 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/openbsd-x64
+160 silly reify mark deleted [
+160 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/openbsd-x64'
+160 silly reify ]
+161 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/netbsd-x64
+162 silly reify mark deleted [
+162 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/netbsd-x64'
+162 silly reify ]
+163 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-x64
+164 silly reify mark deleted [
+164 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-x64'
+164 silly reify ]
+165 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-s390x
+166 silly reify mark deleted [
+166 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-s390x'
+166 silly reify ]
+167 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-riscv64
+168 silly reify mark deleted [
+168 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-riscv64'
+168 silly reify ]
+169 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-ppc64
+170 silly reify mark deleted [
+170 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-ppc64'
+170 silly reify ]
+171 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-mips64el
+172 silly reify mark deleted [
+172 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-mips64el'
+172 silly reify ]
+173 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-loong64
+174 silly reify mark deleted [
+174 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-loong64'
+174 silly reify ]
+175 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-ia32
+176 silly reify mark deleted [
+176 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-ia32'
+176 silly reify ]
+177 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-arm64
+178 silly reify mark deleted [
+178 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-arm64'
+178 silly reify ]
+179 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-arm
+180 silly reify mark deleted [
+180 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/linux-arm'
+180 silly reify ]
+181 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/freebsd-x64
+182 silly reify mark deleted [
+182 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/freebsd-x64'
+182 silly reify ]
+183 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/freebsd-arm64
+184 silly reify mark deleted [
+184 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/freebsd-arm64'
+184 silly reify ]
+185 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/darwin-x64
+186 silly reify mark deleted [
+186 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/darwin-x64'
+186 silly reify ]
+187 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/android-x64
+188 silly reify mark deleted [
+188 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/android-x64'
+188 silly reify ]
+189 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/android-arm64
+190 silly reify mark deleted [
+190 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/android-arm64'
+190 silly reify ]
+191 verbose reify failed optional dependency /Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/android-arm
+192 silly reify mark deleted [
+192 silly reify   '/Users/raunakbohra/Desktop/iwishbag-shopify/node_modules/vite/node_modules/@esbuild/android-arm'
+192 silly reify ]
+193 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 516ms
+194 silly audit report {
+194 silly audit report   esbuild: [
+194 silly audit report     {
+194 silly audit report       id: 1102341,
+194 silly audit report       url: 'https://github.com/advisories/GHSA-67mh-4wv8-2f99',
+194 silly audit report       title: 'esbuild enables any website to send any requests to the development server and read the response',
+194 silly audit report       severity: 'moderate',
+194 silly audit report       vulnerable_versions: '<=0.24.2',
+194 silly audit report       cwe: [Array],
+194 silly audit report       cvss: [Object]
+194 silly audit report     }
+194 silly audit report   ]
+194 silly audit report }
+195 silly packumentCache corgi:https://registry.npmjs.org/esbuild cache-miss
+196 http fetch GET 200 https://registry.npmjs.org/esbuild 109ms (cache miss)
+197 silly packumentCache corgi:https://registry.npmjs.org/esbuild set size:undefined disposed:false
+198 silly packumentCache corgi:https://registry.npmjs.org/vite cache-miss
+199 http fetch GET 200 https://registry.npmjs.org/vite 120ms (cache miss)
+200 silly packumentCache corgi:https://registry.npmjs.org/vite set size:undefined disposed:false
+201 silly packumentCache corgi:https://registry.npmjs.org/vite-node cache-miss
+202 silly packumentCache corgi:https://registry.npmjs.org/vitest cache-miss
+203 http fetch GET 200 https://registry.npmjs.org/vite-node 93ms (cache miss)
+204 silly packumentCache corgi:https://registry.npmjs.org/vite-node set size:undefined disposed:false
+205 http fetch GET 200 https://registry.npmjs.org/vitest 183ms (cache miss)
+206 silly packumentCache corgi:https://registry.npmjs.org/vitest set size:undefined disposed:false
+207 silly ADD
+208 silly ADD
+209 silly ADD
+210 silly ADD
+211 silly ADD
+212 silly ADD
+213 silly ADD
+214 silly ADD
+215 silly ADD
+216 silly ADD
+217 silly ADD
+218 silly ADD
+219 silly ADD
+220 silly ADD
+221 silly ADD
+222 silly ADD
+223 silly ADD
+224 silly ADD
+225 silly ADD
+226 silly ADD
+227 silly ADD
+228 silly ADD
+229 silly ADD
+230 silly ADD
+231 silly ADD
+232 silly ADD
+233 silly ADD
+234 silly ADD
+235 silly ADD
+236 silly ADD
+237 silly ADD
+238 silly ADD
+239 silly ADD
+240 silly ADD
+241 silly ADD
+242 silly ADD
+243 silly ADD
+244 silly ADD
+245 silly ADD
+246 silly ADD
+247 silly ADD
+248 silly ADD
+249 silly ADD
+250 silly ADD
+251 silly ADD
+252 silly ADD
+253 silly ADD
+254 silly ADD
+255 silly ADD
+256 silly ADD
+257 silly ADD
+258 silly ADD
+259 silly ADD
+260 silly ADD
+261 silly ADD
+262 silly ADD
+263 silly ADD
+264 silly ADD
+265 silly ADD
+266 silly ADD
+267 silly ADD
+268 silly ADD
+269 silly ADD
+270 silly ADD
+271 silly ADD
+272 silly ADD
+273 silly ADD
+274 silly ADD
+275 silly ADD
+276 silly ADD
+277 silly ADD
+278 silly ADD
+279 silly ADD
+280 silly ADD
+281 silly ADD
+282 silly ADD
+283 silly ADD
+284 silly ADD
+285 silly ADD
+286 silly ADD
+287 silly ADD
+288 silly ADD
+289 silly ADD
+290 silly ADD
+291 silly ADD
+292 silly ADD
+293 silly ADD
+294 silly ADD
+295 verbose cwd /Users/raunakbohra/Desktop/iwishbag-shopify/api
+296 verbose os Darwin 24.5.0
+297 verbose node v22.14.0
+298 verbose npm  v10.9.2
+299 verbose exit 0
+300 info ok

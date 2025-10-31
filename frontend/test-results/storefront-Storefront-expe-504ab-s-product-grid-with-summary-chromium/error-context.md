@@ -1,0 +1,73 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - paragraph [ref=e5]: demo-store
+        - heading "Explore products" [level=1] [ref=e6]
+        - paragraph [ref=e7]: Discover the latest arrivals and best sellers from our merchants.
+      - generic [ref=e8]:
+        - link "EN" [ref=e9] [cursor=pointer]:
+          - /url: /demo-store/products?locale=en
+        - link "ने" [ref=e10] [cursor=pointer]:
+          - /url: /demo-store/products?locale=ne
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - textbox "Search by name or SKU" [ref=e13]
+        - button "Search" [ref=e14] [cursor=pointer]
+      - form "Filters" [ref=e16]:
+        - generic [ref=e17]:
+          - text: Sort
+          - combobox "Sort" [ref=e18]:
+            - option "Relevance" [selected]
+            - 'option "Price: low to high"'
+            - 'option "Price: high to low"'
+            - option "Newest"
+        - generic [ref=e19]:
+          - checkbox "In stock only" [ref=e20]
+          - text: In stock only
+        - button "Apply" [ref=e21] [cursor=pointer]
+    - status [ref=e22]: Showing 1–1 of 1 products
+    - article [ref=e24]:
+      - link "Demo Everest expedition backpack" [ref=e25] [cursor=pointer]:
+        - /url: /demo-store/products/everest-expedition-backpack
+        - img "Demo Everest expedition backpack" [ref=e26]
+      - generic [ref=e27]:
+        - heading "Everest Expedition Backpack" [level=3] [ref=e28]
+        - generic [ref=e30]: NPR 4,800
+        - paragraph [ref=e31]: "Available: 42"
+        - button "Add to cart" [ref=e33] [cursor=pointer]
+    - navigation "Pagination" [ref=e34]:
+      - link "Previous page" [disabled]:
+        - /url: /demo-store/products?page=1
+      - generic [ref=e35]: 1 / 1
+      - link "Next page" [disabled]:
+        - /url: /demo-store/products?page=2
+  - button "Cart" [ref=e36] [cursor=pointer]
+  - dialog "Shopping cart" [ref=e37]:
+    - banner [ref=e38]:
+      - heading "Your Cart" [level=2] [ref=e39]
+      - button "Close cart" [ref=e40] [cursor=pointer]: ×
+    - paragraph [ref=e42]: Your cart is empty. Explore the catalog to add products.
+    - contentinfo [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]: Subtotal
+        - generic [ref=e46]: NPR 0.00
+      - generic [ref=e47]:
+        - generic [ref=e48]: Discounts
+        - generic [ref=e49]: "-NPR 0.00"
+      - generic [ref=e50]:
+        - generic [ref=e51]: Shipping
+        - generic [ref=e52]: Calculated at checkout
+      - generic [ref=e53]:
+        - generic [ref=e54]: Tax
+        - generic [ref=e55]: NPR 0.00
+      - generic [ref=e56]:
+        - generic [ref=e57]: Total
+        - generic [ref=e58]: NPR 0.00
+      - button "Clear cart" [disabled] [ref=e59]
+      - button "Go to checkout" [disabled] [ref=e60]
+  - alert [ref=e61]
+```

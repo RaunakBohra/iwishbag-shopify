@@ -104,7 +104,7 @@ export async function createStaff(env: EnvBindings, authUser: AuthUser, payload:
       const limits = getPlanLimits(tenant.plan)
       const staffCount = await tx.user.count({ where: { tenantId, deletedAt: null } })
       if (staffCount >= limits.staff) {
-        throw new HTTPException(409, { message: 'Staff limit reached for current plan' })
+        throw new HTTPException(429, { message: 'Staff limit reached for current plan' })
       }
 
       const existing = await tx.user.findUnique({ where: { email } })

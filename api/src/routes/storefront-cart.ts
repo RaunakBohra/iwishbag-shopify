@@ -21,15 +21,15 @@ const cartRoutes = new Hono<AppEnv>()
 
 const addItemSchema = z.object({
   productId: z.string().min(1),
-  variantId: z.string().optional(),
+  variantId: z.string().nullable().optional(),
   quantity: z.number().int().positive(),
-  attributes: z.record(z.unknown()).optional()
+  attributes: z.record(z.unknown()).optional().nullable()
 })
 
 const updateItemSchema = z.object({
   itemId: z.string().min(1),
   quantity: z.number().int().positive(),
-  attributes: z.record(z.unknown()).optional()
+  attributes: z.record(z.unknown()).optional().nullable()
 })
 
 const checkoutSchema = z.object({

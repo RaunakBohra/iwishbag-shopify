@@ -47,9 +47,9 @@ beforeEach(() => {
   mockPrisma.productTag.findMany.mockResolvedValue([
     { id: 'tag-1', tenantId: 'tenant-1', name: 'Summer', slug: 'summer' }
   ])
-  mockPrisma.productTag.create.mockImplementation(async ({ data }) => ({
+  mockPrisma.productTag.create.mockImplementation(async (args: { data: Record<string, unknown> }) => ({
     id: 'tag-1',
-    ...data
+    ...args.data
   }))
   mockPrisma.productTag.findFirst.mockResolvedValue({
     id: 'tag-1',

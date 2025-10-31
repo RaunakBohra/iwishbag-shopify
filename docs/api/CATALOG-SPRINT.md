@@ -9,7 +9,7 @@
 - [x] Ship product variant/option/media/tag/collection services with authenticated Hono routes.
 - [x] Add R2 asset management (product images upload + ordering).
 - [x] Enforce plan-based product, variant, and image limits.
-- [x] Background job to recompute inventory + search index (MeiliSearch) on changes.
+- [x] Background job to recompute inventory snapshots on catalog changes.
 - [x] Unit tests for catalog service edge cases (variants, soft delete, limits).
 
 ## Sprint 3.2 – Merchant Catalog UI
@@ -22,7 +22,8 @@
 - [x] Public `/v1/storefront/:tenantSlug/products` endpoints (search, pagination, filters).
 - [ ] Implement customer-facing product pages in storefront app (Next.js app).
 - [ ] Add GSSP caching strategy (Cloudflare) and fallback behaviour.
-- [ ] Basic cart abstraction (Durable Object) ready for checkout sprint.
+- [x] Basic cart abstraction (API-backed cart sessions + Prisma) ready for checkout sprint.
+- [x] Checkout session API (create/preview/confirm/submit) with inventory reservations.
 
 ## Sprint 3.4 – Inventory & Logistics Integration
 - [x] Inventory adjustments via webhooks (local couriers, manual adjustments).

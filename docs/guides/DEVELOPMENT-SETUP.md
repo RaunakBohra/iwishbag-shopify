@@ -123,6 +123,11 @@ KV_NAMESPACE_ID="your_kv_id"
 # JWT
 JWT_SECRET="your-super-secret-jwt-key-min-32-chars"
 JWT_EXPIRES_IN="7d"
+FRONTEND_URL="http://localhost:3000"
+
+# Transactional email (Postmark)
+POSTMARK_API_TOKEN="postmark-server-token"
+PASSWORD_RESET_EMAIL_FROM="support@nepshop.test"
 
 # Session
 SESSION_SECRET="your-session-secret-key"
@@ -168,9 +173,6 @@ TOOTLE_ENVIRONMENT="test"
 # Redis (Optional - for caching)
 REDIS_URL="redis://localhost:6379"
 
-# MeiliSearch (Optional - for search)
-MEILISEARCH_HOST="http://localhost:7700"
-MEILISEARCH_MASTER_KEY="your_master_key"
 ```
 
 #### **`.env.test`** (Testing)
@@ -179,6 +181,9 @@ MEILISEARCH_MASTER_KEY="your_master_key"
 NODE_ENV="test"
 DATABASE_URL="postgresql://user:pass@localhost:5432/test_db"
 JWT_SECRET="test-secret-key-for-testing"
+FRONTEND_URL="http://localhost:3000"
+POSTMARK_API_TOKEN="postmark-test-token"
+PASSWORD_RESET_EMAIL_FROM="test-support@nepshop.test"
 ```
 
 ---
@@ -656,53 +661,39 @@ describe('Product API Integration', () => {
 
 ### 3. E2E Tests (Playwright)
 
+The admin workspace now ships with lightweight smoke tests that exercise the dashboard shell and onboarding wizard. Install the browser binaries once and point the runner at a running dev server.
+
 ```bash
-# Install Playwright
-pnpm exec playwright install
+# Install Playwright browsers once (requires network)
+npx --yes playwright install
 
-# Run E2E tests
-pnpm test:e2e
+# Terminal 1 – start the admin app with the API base URL your wizard expects
+# (set `ALLOW_DEV_ACCESS=true` locally if you are not behind Cloudflare Access)
+NEXT_PUBLIC_API_URL="https://dev-api.example.com" ALLOW_DEV_ACCESS=true npm run --workspace admin dev
 
-# Run with UI
-pnpm exec playwright test --ui
+# Terminal 2 – execute the smoke tests against that server
+ADMIN_BASE_URL="http://127.0.0.1:3000" npm run --workspace admin test:e2e
+
+# Optional: open Playwright UI mode for debugging
+ADMIN_BASE_URL="http://127.0.0.1:3000" npm run --workspace admin test:e2e:ui
 ```
 
-**Example** (`apps/web/tests/e2e/signup.spec.ts`):
+**Example** (`admin/tests/dashboard.spec.ts`):
 
 ```typescript
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
-test.describe('Merchant Signup Flow', () => {
-  test('should complete signup successfully', async ({ page }) => {
-    await page.goto('http://localhost:3000/signup')
+test.describe('Merchant dashboard', () => {
+  test('renders onboarding checklist and notifications', async ({ page }) => {
+    await page.goto('/')
 
-    // Fill form
-    await page.fill('input[name="storeName"]', 'My Test Store')
-    await page.fill('input[name="email"]', 'test@example.com')
-    await page.fill('input[name="password"]', 'SecurePass123!')
-
-    // Submit
-    await page.click('button[type="submit"]')
-
-    // Wait for redirect
-    await page.waitForURL('**/onboarding')
-
-    // Verify onboarding page
-    expect(await page.textContent('h1')).toContain('Welcome')
-  })
-
-  test('should show validation errors', async ({ page }) => {
-    await page.goto('http://localhost:3000/signup')
-
-    // Submit empty form
-    await page.click('button[type="submit"]')
-
-    // Check errors
-    const errors = await page.locator('.error-message').allTextContents()
-    expect(errors.length).toBeGreaterThan(0)
+    await expect(page.getByText('Onboarding checklist')).toBeVisible()
+    await expect(page.getByText('Notification center')).toBeVisible()
   })
 })
 ```
+
+> **CI note:** The `Admin CI` GitHub Actions workflow (`.github/workflows/admin-ci.yml`) runs `npm run --workspace admin type-check` and `npm run --workspace admin test:e2e` on every push/PR, publishing the Playwright HTML report as an artifact.
 
 ---
 

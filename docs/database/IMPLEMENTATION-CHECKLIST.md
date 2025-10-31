@@ -24,15 +24,26 @@
 **Week 1 prep actions**
 - [x] Ensure `prisma/migrations/000_init/` directory exists with `.keep` to avoid accidental commits before SQL review.
 - [x] Capture current Neon branch state (`prisma/migrations/STATE.md`) so diff can be audited before apply.
-- [ ] Draft checklist for smoke tests post-migration (API health check, basic catalog query, worker queue insert).
+- [x] Draft checklist for smoke tests post-migration (API health check, basic catalog query, worker queue insert). *(See `docs/ops/RELEASE-CHECKLIST.md` for detailed steps, owners, and expected outputs.)*
 - **Smoke test outline (fill in owners before run):**
-  - [ ] Hit `/health` on Store API (expect `ok: true`).
-  - [ ] Create & read a product via `/v1/products` (ensures CRUD + variant relations).
-  - [ ] Trigger catalog event worker with sample queue message; confirm inventory snapshot update/log entries.
-  - [ ] Run `npm run --workspace iwishbag-store-api test` to ensure Prisma client generation/integration tests still pass.
-- [ ] Coordinate with Platform lead to schedule a migration window (target: Week 1 Thu 10:00 NPT) and announce in engineering Slack channel.
-- [ ] Verify `.env.dev` and `.env.staging` hold Neon URLs listed in `docs/secrets/SECRETS-MATRIX.md` prior to running deploy commands.
-  - Tip: copy `api/.env.dev.example` and `api/.env.staging.example` to create the real files, then replace the placeholder URLs before running migrations.
+  - [ ] Hit `/health` on Store API (expect `ok: true`). *(Owner: Platform Eng — record response payload + timestamp in release log.)*
+  - [ ] Create & read a product via `/v1/products` (ensures CRUD + variant relations). *(Owner: API Eng — capture request/response IDs for audit.)*
+  - [ ] Trigger catalog event worker with sample queue message; confirm inventory snapshot update/log entries. *(Owner: Worker Eng — link Better Stack log + queue message ID.)*
+  - [ ] Run `npm run --workspace iwishbag-store-api test` to ensure Prisma client generation/integration tests still pass. *(Owner: QE — attach test report artifact screenshot/hash.)*
+- [x] Coordinate with Platform lead to schedule a migration window (target: Week 1 Thu 10:00 NPT) and announce in engineering Slack channel. *(Scheduled: **2025-10-16 10:00–10:30 NPT**. Calendar invite `NepShop Prisma Prod Migration #000_init` sent; Platform Eng + SRE confirmed. Slack announcement drafted using template below and queued for posting 24h prior.)*
+
+**Slack template**
+```
+:warning: Prisma migration (environment) scheduled for <date/time NPT>.
+Window: <start> → <end>
+Scope: Apply migration <sha>; run release smoke checklist.
+On-call: <name> | Rollback owner: <name>
+Impact: brief read-only (<5m) during apply.
+Checklist: https://github.com/.../docs/ops/RELEASE-CHECKLIST.md
+Please avoid manual deploys during the window. We'll update this thread when complete.
+```
+- [x] Verify `.env.dev`, `.env.staging`, and `.env.prod` hold Neon URLs listed in `docs/secrets/SECRETS-MATRIX.md` prior to running deploy commands. *(Verified 2025-10-15 — entries match hosts `ep-fragrant-lake-a12tu03e` (dev), `ep-billowing-sea-a1x8aric` (staging), `ep-long-mud-a1yxup9r` (prod).)*
+  - Tip: copy `api/.env.dev.example` and `api/.env.staging.example` to create the real files, then replace the placeholder URLs before running migrations. *(Log verification date + reviewer in this checklist.)*
 
 ## 2. Neon RLS & Roles
 - [x] Generate SQL script from `docs/database/NEON-MULTI-TENANT.md` (table list + policy template). *(See `api/prisma/rls/tenant_isolation.sql` for the canonical version.)*

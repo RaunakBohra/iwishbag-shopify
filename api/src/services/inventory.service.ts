@@ -4,6 +4,7 @@ import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 import { applyUsageDelta } from './usage.service'
 import { enqueueCatalogEvent } from './catalog-events.service'
+import { logToBetterStack } from '../lib/logging'
 
 function requireTenantId(authUser: AuthUser) {
   if (!authUser.tenantId) {
@@ -209,24 +210,34 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
 
       product.inventory = updatedInventory
 
-      await tx.productInventory.upsert({
+      const inventoryRecord = await tx.productInventory.findFirst({
         where: {
-          productId_variantId: {
-            productId: payload.productId,
-            variantId: null
-          }
-        },
-        update: {
-          available: updatedInventory,
-          lowStockThreshold: threshold
-        },
-        create: {
-          tenantId,
           productId: payload.productId,
-          available: updatedInventory,
-          lowStockThreshold: threshold
+          variantId: null
+        },
+        select: {
+          id: true
         }
       })
+
+      if (inventoryRecord) {
+        await tx.productInventory.update({
+          where: { id: inventoryRecord.id },
+          data: {
+            available: updatedInventory,
+            lowStockThreshold: threshold
+          }
+        })
+      } else {
+        await tx.productInventory.create({
+          data: {
+            tenantId,
+            productId: payload.productId,
+            available: updatedInventory,
+            lowStockThreshold: threshold
+          }
+        })
+      }
     }
 
     const adjustment = await tx.inventoryAdjustment.create({
@@ -241,7 +252,7 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
       }
     })
 
-    await applyUsageDelta(tx, tenantId, {})
+    await applyUsageDelta(tx, tenantId, { inventoryAdjustments: 1 })
 
     const available = payload.variantId ? (variant?.inventory ?? 0) : product.inventory
 
@@ -276,6 +287,23 @@ export async function createInventoryAdjustment(env: EnvBindings, authUser: Auth
       variantName: result.variantName,
       triggeredAt: new Date().toISOString()
     })
+  }
+
+  try {
+    await logToBetterStack(env, {
+      level: 'info',
+      event: 'inventory.adjustment.created',
+      tenantId,
+      productId: payload.productId,
+      variantId: payload.variantId ?? null,
+      quantity: payload.quantity,
+      reason,
+      available: result.available,
+      threshold: result.threshold,
+      adjustmentId: result.adjustment.id
+    })
+  } catch (error) {
+    console.error('Unable to log inventory adjustment', error)
   }
 
   return { data: result.adjustment }

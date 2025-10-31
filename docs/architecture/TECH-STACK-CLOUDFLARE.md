@@ -107,7 +107,7 @@ Cache: Cloudflare KV (key-value store)
 ```yaml
 Email: AWS SES ($0.10 per 1,000 emails)
 SMS: Sparrow SMS (Nepal) (~Rs 1.4 per SMS)
-Search: MeiliSearch (self-hosted on Fly.io)
+Search: Postgres full-text (Prisma queries)
 Monitoring: Better Stack (logs + uptime)
 Error Tracking: Sentry (free tier)
 Analytics: PostHog (self-hosted on Workers)
@@ -1101,53 +1101,35 @@ export async function sendSMS({
 
 ---
 
-### MeiliSearch (Product Search)
+### Storefront Search (Prisma)
 
-**Why MeiliSearch:**
-- Fast typo-tolerant search
-- Works in Nepali (Devanagari)
-- Simple API
-- Self-hostable
+**Why Postgres Full-Text:**
+- Zero additional hosting cost; rides on existing Neon cluster.
+- Works with multi-tenant data by scoping queries via `tenantId`.
+- Prisma exposes `contains`/`search` helpers that are sufficient for first-version merchandising needs.
 
-**Hosting:** Fly.io ($5-10/month for 1GB RAM)
+**Approach:** Storefront queries run directly against Postgres with Prisma. We apply a combination of case-insensitive `contains` filters and optional full-text search via `search` when we enable metadata columns. Facets (collections, tags) are derived via aggregate queries.
 
-**Setup:**
+**Sample:**
 ```typescript
-// lib/search.ts
-import { MeiliSearch } from 'meilisearch'
-
-const client = new MeiliSearch({
-  host: process.env.MEILISEARCH_URL!,
-  apiKey: process.env.MEILISEARCH_KEY!
+// api/src/services/storefront-search.service.ts (excerpt)
+const products = await prisma.product.findMany({
+  where: {
+    tenantId,
+    status: 'ACTIVE',
+    deletedAt: null,
+    title: { contains: query, mode: 'insensitive' }
+  },
+  include: {
+    variants: true,
+    images: true
+  },
+  orderBy: [{ updatedAt: 'desc' }],
+  take: 24
 })
-
-export async function indexProduct(
-  tenantId: string,
-  product: Product
-): Promise<void> {
-  const index = client.index(`products_${tenantId}`)
-  await index.addDocuments([{
-    id: product.id,
-    title: product.title,
-    title_ne: product.titleNe,
-    description: product.description,
-    price: product.price,
-    category: product.category
-  }])
-}
-
-export async function searchProducts(
-  tenantId: string,
-  query: string
-): Promise<Product[]> {
-  const index = client.index(`products_${tenantId}`)
-  const results = await index.search(query, {
-    limit: 20,
-    attributesToHighlight: ['title', 'title_ne', 'description']
-  })
-  return results.hits as Product[]
-}
 ```
+
+No background indexing step is required—the catalog worker focuses solely on inventory snapshots, which keeps operational complexity low.
 
 ---
 
@@ -1166,8 +1148,8 @@ export async function searchProducts(
 | Cloudflare KV | Minimal | $0 |
 | AWS SES | 5K emails | $0.50 |
 | Sparrow SMS | 1K SMS | $10 |
-| MeiliSearch | Fly.io shared | $5 |
-| **TOTAL** | | **$15.50** |
+| Search (Postgres) | Included | $0 |
+| **TOTAL** | | **$10.50** |
 
 **Revenue:** 10 paying × Rs 1,999 = Rs 19,990/month (~$240)
 **Margin:** 93.5% ✅
@@ -1186,10 +1168,10 @@ export async function searchProducts(
 | Cloudflare Queues | 5M operations | $2 |
 | AWS SES | 50K emails | $5 |
 | Sparrow SMS | 10K SMS | $105 |
-| MeiliSearch | Fly.io 1GB | $10 |
+| Search (Postgres) | Included | $0 |
 | Better Stack | Logs + monitoring | $10 |
 | Sentry | Error tracking | $0 (free tier) |
-| **TOTAL** | | **$298.50** |
+| **TOTAL** | | **$288.50** |
 
 **Revenue:** 120 paying × Rs 1,999 = Rs 2,39,880/month (~$2,900)
 **Margin:** 89.7% ✅
@@ -1210,10 +1192,10 @@ export async function searchProducts(
 | Cloudflare Images | 50K images | $5 |
 | AWS SES | 500K emails | $50 |
 | Sparrow SMS | 50K SMS | $525 |
-| MeiliSearch | Fly.io 2GB | $20 |
+| Search (Postgres) | Included | $0 |
 | Better Stack | Pro plan | $25 |
 | Sentry | Team plan | $26 |
-| **TOTAL** | | **$1,058** |
+| **TOTAL** | | **$1,038** |
 
 **Revenue:** 600 paying × Rs 1,999 avg = Rs 11,99,400/month (~$14,500)
 **Margin:** 92.7% ✅
@@ -1224,9 +1206,9 @@ export async function searchProducts(
 
 | Merchants | Total Cost | Cost per Merchant | Cost per Active |
 |-----------|------------|-------------------|-----------------|
-| 50 | $15 | $0.30 | $1.50 |
-| 200 | $299 | $1.50 | $2.50 |
-| 1000 | $1,058 | $1.06 | $1.76 |
+| 50 | $10.50 | $0.21 | $1.05 |
+| 200 | $288.50 | $1.44 | $2.40 |
+| 1000 | $1,038 | $1.04 | $1.73 |
 
 **Industry Benchmark:** $5-10 per active user (we're 82% cheaper!)
 

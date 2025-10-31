@@ -1,0 +1,41 @@
+
+> iwishbag-store-api@0.1.0 dev
+> wrangler dev --host 127.0.0.1 --port 8787
+
+
+ ⛅️ wrangler 4.43.0
+───────────────────
+Using vars defined in .dev.vars
+Your Worker has access to the following bindings:
+Binding                                                               Resource                  Mode
+env.SESSIONS (8699ef99d1e14bfba4ce5bf8327e2f4e)                       KV Namespace              local
+env.RATE_LIMIT (0a6f1312e49d4fa6a85b525f513ce527)                     KV Namespace              local
+env.CATALOG_EVENTS (catalog-events)                                   Queue                     local
+env.INVENTORY_ALERTS (inventory-alerts)                               Queue                     local
+env.TENANT_PROVISIONING (tenant-provisioning)                         Queue                     local
+env.PRODUCT_MEDIA_BUCKET (nepshop-product-media)                      R2 Bucket                 local
+env.PROOF_OF_DELIVERY_BUCKET (nepshop-proof-of-delivery)              R2 Bucket                 local
+env.BACKUPS_BUCKET (nepshop-backups)                                  R2 Bucket                 local
+env.POSTHOG_HOST ("(hidden)")                                         Environment Variable      local
+env.POSTHOG_API_KEY ("(hidden)")                                      Environment Variable      local
+env.BETTERSTACK_LOGS_TOKEN ("(hidden)")                               Environment Variable      local
+env.BETTERSTACK_LOGS_ENDPOINT ("(hidden)")                            Environment Variable      local
+env.DATABASE_URL ("(hidden)")                                         Environment Variable      local
+env.AWS_SQS_REGION ("(hidden)")                                       Environment Variable      local
+env.AWS_SQS_JOBS_URL ("(hidden)")                                     Environment Variable      local
+env.AWS_SQS_WEBHOOKS_URL ("(hidden)")                                 Environment Variable      local
+env.AWS_SQS_DLQ_JOBS_URL ("(hidden)")                                 Environment Variable      local
+env.AWS_SQS_DLQ_WEBHOOKS_URL ("(hidden)")                             Environment Variable      local
+env.AWS_SQS_ACCESS_KEY_ID ("(hidden)")                                Environment Variable      local
+env.AWS_SQS_SECRET_ACCESS_KEY ("(hidden)")                            Environment Variable      local
+env.JWT_SECRET ("(hidden)")                                           Environment Variable      local
+
+⎔ Starting local server...
+[wrangler:info] Ready on http://localhost:8787
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBETTERSTACK_LOGS_TOKEN missing; skipping log forward[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBETTERSTACK_LOGS_TOKEN missing; skipping log forward[0m
+
+
+[wrangler:info] GET /public/v1/storefront/demo-storefront/products 404 Not Found (968ms)

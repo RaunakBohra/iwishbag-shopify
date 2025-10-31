@@ -1,9 +1,8 @@
 # 🛰️ Neon Multi-Tenancy Implementation Plan
 
-> **Version:** 1.0
-> **Status:** In Progress
-
 Detailed tasks for configuring Neon PostgreSQL to support secure multi-tenant operations.
+
+> Reference: `docs/database/IMPLEMENTATION-CHECKLIST.md` for execution steps and sign-off.
 
 ---
 
@@ -127,4 +126,3 @@ Detailed tasks for configuring Neon PostgreSQL to support secure multi-tenant op
 - [ ] On suspected data leak: revoke credentials, rotate secrets, inspect audit logs.
 - [ ] Restore from PITR snapshot if necessary; announce impact to affected merchants.
 - [ ] Post-mortem template stored in `/docs/ops/postmortem-template.md`.
-

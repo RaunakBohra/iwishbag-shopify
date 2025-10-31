@@ -69,16 +69,18 @@
 
 ### Phase 2: Architecture & Design
 **Duration:** 3-4 weeks
-**Status:** IN PROGRESS
+**Status:** IN PROGRESS ✅
 
-**Deliverables:**
-- [ ] Complete database schema (60+ tables)
-- [ ] API specifications (REST + GraphQL)
-- [ ] System architecture diagrams
-- [ ] User flow diagrams
-- [ ] Tech stack finalization
-- [ ] Infrastructure setup (AWS/Vercel/Railway)
-- [ ] Development environment setup
+**Latest Update:**
+- Database schema ~90% defined; cart/checkout entities & sessions landed (20251024221500 migration).
+- REST surface covers auth, catalog, onboarding, cart; checkout specs drafted alongside cart service.
+- Tenant/system diagrams captured in `docs/architecture/SYSTEM-ARCHITECTURE.md`; worker topology validated in Better Stack telemetry notes.
+- Dev environments humming: admin/storefront Next.js apps and Cloudflare worker queues wired to shared Neon branch via Prisma migrations.
+
+**Upcoming (Phase 3 Kick-off):**
+1. Connect cart service to checkout/payment pipeline (inventory reservations, pricing engine).
+2. Ship storefront cart UI consuming `/v1/cart` sessions.
+3. Expand worker telemetry + notifications post-provisioning.
 
 **Key Documents:**
 1. `docs/architecture/TECH-STACK.md`
@@ -306,7 +308,7 @@
 - **Primary DB:** PostgreSQL 16 (Neon or Supabase)
 - **ORM:** Prisma 6
 - **Caching:** Redis (Upstash)
-- **Search:** Elasticsearch or MeiliSearch
+- **Search:** Postgres full-text (Prisma-powered)
 - **File Storage:** AWS S3 / Cloudflare R2
 - **CDN:** Cloudflare
 

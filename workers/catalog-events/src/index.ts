@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-import { MeiliSearch } from 'meilisearch'
 import { z } from 'zod'
 import type { Queue, QueueBatch, QueueMessage } from '@cloudflare/workers-types'
 import { logToBetterStack } from '@api/lib/logging'
@@ -31,8 +30,6 @@ type CatalogEvent = z.infer<typeof catalogEventSchema>
 
 interface WorkerEnv {
   DATABASE_URL: string
-  MEILISEARCH_URL: string
-  MEILISEARCH_KEY: string
   BETTERSTACK_LOGS_TOKEN?: string
   BETTERSTACK_LOGS_ENDPOINT?: string
   CATALOG_EVENTS_DLQ: Queue
@@ -50,19 +47,6 @@ function getPrisma(env: WorkerEnv) {
   }
 
   return prisma
-}
-
-let meiliClient: MeiliSearch | null = null
-
-function getMeiliClient(env: WorkerEnv) {
-  if (!meiliClient) {
-    meiliClient = new MeiliSearch({
-      host: env.MEILISEARCH_URL,
-      apiKey: env.MEILISEARCH_KEY
-    })
-  }
-
-  return meiliClient
 }
 
 async function recomputeCatalogUsage(prismaClient: PrismaClient, tenantId: string) {
@@ -100,95 +84,6 @@ async function recomputeCatalogUsage(prismaClient: PrismaClient, tenantId: strin
   return { products, variants, images }
 }
 
-function normalizeDecimal(value: unknown) {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'number') {
-    return value
-  }
-
-  if (typeof value === 'object' && value !== null && 'toNumber' in value && typeof (value as any).toNumber === 'function') {
-    try {
-      return (value as any).toNumber()
-    } catch {
-      return Number(value)
-    }
-  }
-
-  return Number(value)
-}
-
-async function syncProductToSearch(env: WorkerEnv, event: CatalogEvent) {
-  const prismaClient = getPrisma(env)
-  const meili = getMeiliClient(env)
-  const index = meili.index(`products_${event.tenantId}`)
-
-  if (event.event === 'product.deleted') {
-    await index.deleteDocument(event.productId).catch(() => {})
-    return
-  }
-
-  const product = await prismaClient.product.findFirst({
-    where: {
-      id: event.productId,
-      tenantId: event.tenantId
-    },
-    include: {
-      variants: true,
-      images: true,
-      tags: {
-        include: {
-          tag: true
-        }
-      },
-      collections: {
-        include: {
-          collection: true
-        }
-      }
-    }
-  })
-
-  if (!product || product.deletedAt) {
-    await index.deleteDocument(event.productId).catch(() => {})
-    return
-  }
-
-  const variantStock = product.variants.reduce((sum, variant) => sum + (variant.inventory ?? 0), 0)
-  const document = {
-    id: product.id,
-    tenantId: product.tenantId,
-    title: product.title,
-    description: product.description ?? '',
-    status: product.status,
-    price: normalizeDecimal(product.price),
-    baseInventory: product.inventory,
-    variantInventory: variantStock,
-    tags: product.tags.map((tagging) => tagging.tag?.name).filter(Boolean),
-    collections: product.collections.map((assignment) => assignment.collection?.slug ?? assignment.collection?.name).filter(Boolean),
-    variants: product.variants.map((variant) => ({
-      id: variant.id,
-      name: variant.name,
-      sku: variant.sku,
-      price: normalizeDecimal(variant.price),
-      inventory: variant.inventory
-    })),
-    images: product.images
-      .sort((a, b) => a.position - b.position)
-      .map((image) => ({
-        id: image.id,
-        url: image.url,
-        alt: image.alt ?? '',
-        position: image.position
-      })),
-    updatedAt: product.updatedAt.toISOString()
-  }
-
-  await index.addDocuments([document], { primaryKey: 'id' })
-}
-
 function shouldRecomputeInventory(event: CatalogEvent) {
   if (event.recomputeInventory === true) {
     return true
@@ -223,8 +118,6 @@ async function handleMessage(message: QueueMessage, env: WorkerEnv) {
   if (shouldRecomputeInventory(event)) {
     await recomputeCatalogUsage(prismaClient, event.tenantId)
   }
-
-  await syncProductToSearch(env, event)
 
   await logToBetterStack(env, {
     level: 'info',
@@ -272,4 +165,3 @@ export default {
     )
   }
 }
-*** End Patch to=workers/catalog-events/src/index.ts

@@ -1,0 +1,37 @@
+0 verbose cli /usr/local/bin/node /usr/local/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 info config found workspace root at /Users/raunakbohra/Desktop/iwishbag-shopify
+5 silly config load:file:/Users/raunakbohra/Desktop/iwishbag-shopify/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm run dev
+8 verbose argv "run" "dev"
+9 verbose logfile logs-max:10 dir:/Users/raunakbohra/Desktop/iwishbag-shopify/.npm/_logs/2025-10-19T04_04_39_000Z-
+10 verbose logfile /Users/raunakbohra/Desktop/iwishbag-shopify/.npm/_logs/2025-10-19T04_04_39_000Z-debug-0.log
+11 silly logfile done cleaning log files
+12 http fetch GET https://registry.npmjs.org/npm attempt 1 failed with ENOTFOUND
+13 verbose stack Error: command failed
+13 verbose stack     at promiseSpawn (/usr/local/lib/node_modules/npm/node_modules/@npmcli/promise-spawn/lib/index.js:22:22)
+13 verbose stack     at spawnWithShell (/usr/local/lib/node_modules/npm/node_modules/@npmcli/promise-spawn/lib/index.js:124:10)
+13 verbose stack     at promiseSpawn (/usr/local/lib/node_modules/npm/node_modules/@npmcli/promise-spawn/lib/index.js:12:12)
+13 verbose stack     at runScriptPkg (/usr/local/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/run-script-pkg.js:77:13)
+13 verbose stack     at runScript (/usr/local/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/run-script.js:9:12)
+13 verbose stack     at #run (/usr/local/lib/node_modules/npm/lib/commands/run-script.js:131:13)
+13 verbose stack     at RunScript.execWorkspaces (/usr/local/lib/node_modules/npm/lib/commands/run-script.js:63:24)
+13 verbose stack     at async Npm.exec (/usr/local/lib/node_modules/npm/lib/npm.js:207:9)
+13 verbose stack     at async module.exports (/usr/local/lib/node_modules/npm/lib/cli/entry.js:74:5)
+14 verbose pkgid iwishbag-store-api@0.1.0
+15 error Lifecycle script `dev` failed with error:
+16 error code 1
+17 error path /Users/raunakbohra/Desktop/iwishbag-shopify/api
+18 error workspace iwishbag-store-api@0.1.0
+19 error location /Users/raunakbohra/Desktop/iwishbag-shopify/api
+20 error command failed
+21 error command sh -c wrangler dev
+22 verbose cwd /Users/raunakbohra/Desktop/iwishbag-shopify/api
+23 verbose os Darwin 24.5.0
+24 verbose node v22.14.0
+25 verbose npm  v10.9.2
+26 verbose exit 1
+27 verbose code 1

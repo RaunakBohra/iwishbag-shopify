@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState, ChangeEvent, FormEvent } from 'react'
+import { useMemo, useState, ChangeEvent, FormEvent, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { z } from 'zod'
 import { useCart } from '../../../components/cart/CartContext'
 import type { CheckoutSessionResource } from '../../../lib/cart-client'
 import { PROVINCES, findProvince } from '../../../lib/nepal-address'
@@ -37,6 +38,32 @@ const INITIAL_FORM: FormState = {
   paymentMethod: 'cod'
 }
 
+const PROVINCE_CODES = PROVINCES.map((province) => province.code) as [string, ...string[]]
+const SHIPPING_METHODS = ['standard', 'express'] as const
+const PAYMENT_METHODS = ['cod', 'card'] as const
+
+const CheckoutFormSchema = z.object({
+  email: z.string().trim().email('Enter a valid email address'),
+  phone: z
+    .string()
+    .trim()
+    .min(7, 'Phone number must be at least 7 digits')
+    .max(32, 'Phone number is too long'),
+  fullName: z.string().trim().min(1, 'Full name is required'),
+  addressLine1: z.string().trim().min(1, 'Address line 1 is required'),
+  addressLine2: z.string().optional().transform((value) => (value ?? '').trim()),
+  city: z.string().trim().min(1, 'City is required'),
+  province: z.enum(PROVINCE_CODES, { errorMap: () => ({ message: 'Province is required' }) }),
+  district: z.string().trim().min(1, 'District is required'),
+  postalCode: z.string().trim().min(1, 'Postal code is required'),
+  shippingMethod: z.enum(SHIPPING_METHODS, { errorMap: () => ({ message: 'Choose a shipping method' }) }),
+  paymentMethod: z.enum(PAYMENT_METHODS, { errorMap: () => ({ message: 'Select a payment option' }) })
+})
+
+type CheckoutFormInput = z.infer<typeof CheckoutFormSchema>
+type FormErrors = Partial<Record<keyof CheckoutFormInput, string>>
+const FIELD_ERROR_STYLE = { color: '#ef4444', fontSize: '0.8rem' } as const
+
 const SHIPPING_OPTIONS: Record<FormState['shippingMethod'], { id: string; label: string; amount: number }> = {
   standard: {
     id: 'standard',
@@ -58,23 +85,49 @@ function formatCurrency(amount: number, currency = 'NPR') {
 }
 
 export default function CheckoutPage() {
-  const { cart, beginCheckout, pending } = useCart()
+  const { cart, beginCheckout, pending, loading } = useCart()
   const router = useRouter()
   const params = useParams()
   const tenantSlug = typeof params?.tenant === 'string' ? params.tenant : Array.isArray(params?.tenant) ? params?.tenant[0] : ''
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<CheckoutSessionResource | null>(null)
 
+  useEffect(() => {
+    if (!tenantSlug || loading) {
+      return
+    }
+    if (!cart || cart.items.length === 0) {
+      router.replace(`/${tenantSlug}/products`)
+    }
+  }, [cart, tenantSlug, router, loading])
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '960px', margin: '2rem auto', padding: '1.5rem', color: '#475569' }}>
+        Loading your cart…
+      </div>
+    )
+  }
+
   if (!cart || cart.items.length === 0) {
-    router.push(`/${tenantSlug}/products`)
     return null
   }
 
   const handleChange = (field: keyof FormState) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = event.target.value
+    setError(null)
+    setFieldErrors((current) => {
+      const next = { ...current }
+      delete next[field]
+      if (field === 'province') {
+        delete next.district
+      }
+      return next
+    })
     setForm((current) => {
       if (field === 'province') {
         const province = findProvince(value) ?? DEFAULT_PROVINCE
@@ -101,36 +154,56 @@ export default function CheckoutPage() {
     setSubmitting(true)
     setError(null)
     try {
-      const shipping = SHIPPING_OPTIONS[form.shippingMethod]
+      const validation = CheckoutFormSchema.safeParse(form)
+      if (!validation.success) {
+        const message = validation.error.issues[0]?.message ?? 'Please correct the highlighted fields'
+        const nextErrors: FormErrors = {}
+        for (const issue of validation.error.issues) {
+          const pathKey = issue.path[0]
+          if (typeof pathKey === 'string' && nextErrors[pathKey as keyof CheckoutFormInput] === undefined) {
+            nextErrors[pathKey as keyof CheckoutFormInput] = issue.message
+          }
+        }
+        setFieldErrors(nextErrors)
+        setError(message)
+        return
+      }
+
+      setFieldErrors({})
+      const data = validation.data
+      setForm((current) => ({ ...current, ...data }))
+
+      const shipping = SHIPPING_OPTIONS[data.shippingMethod]
       const payloadShippingMethod = {
         id: shipping.id,
         label: shipping.label,
         amount: shipping.amount
       }
-      const provinceMeta = selectedProvince
-      const districtMeta = districtOptions.find((district) => district.code === form.district) ?? districtOptions[0]
+      const provinceMeta = findProvince(data.province) ?? DEFAULT_PROVINCE
+      const districtMeta =
+        provinceMeta.districts.find((district) => district.code === data.district) ?? provinceMeta.districts[0]
 
       const payloadAddress = {
-        fullName: form.fullName,
-        addressLine1: form.addressLine1,
-        addressLine2: form.addressLine2 || null,
-        city: form.city,
+        fullName: data.fullName,
+        addressLine1: data.addressLine1,
+        addressLine2: data.addressLine2 ? data.addressLine2 : null,
+        city: data.city,
         province: provinceMeta?.name ?? '',
         provinceCode: provinceMeta?.code ?? '',
         district: districtMeta?.name ?? '',
         districtCode: districtMeta?.code ?? '',
-        postalCode: form.postalCode,
+        postalCode: data.postalCode,
         country: 'NP'
       }
 
       const result = await beginCheckout({
-        email: form.email,
-        phone: form.phone,
+        email: data.email,
+        phone: data.phone,
         shippingAddress: payloadAddress,
         billingAddress: payloadAddress,
         shippingMethod: payloadShippingMethod,
         metadata: {
-          paymentMethod: form.paymentMethod
+          paymentMethod: data.paymentMethod
         }
       })
 
@@ -195,6 +268,7 @@ export default function CheckoutPage() {
                 placeholder="you@example.com"
                 style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
               />
+              {fieldErrors.email ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.email}</span> : null}
             </label>
             <label style={{ display: 'grid', gap: '0.35rem' }}>
               <span>Phone</span>
@@ -206,6 +280,7 @@ export default function CheckoutPage() {
                 placeholder="980-0000000"
                 style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
               />
+              {fieldErrors.phone ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.phone}</span> : null}
             </label>
           </section>
           <section style={{ display: 'grid', gap: '0.75rem' }}>
@@ -231,6 +306,7 @@ export default function CheckoutPage() {
               />
               Card (coming soon)
             </label>
+            {fieldErrors.paymentMethod ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.paymentMethod}</span> : null}
           </section>
           <section style={{ display: 'grid', gap: '0.75rem' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Shipping</h2>
@@ -243,6 +319,7 @@ export default function CheckoutPage() {
                 required
                 style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
               />
+              {fieldErrors.fullName ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.fullName}</span> : null}
             </label>
             <label style={{ display: 'grid', gap: '0.35rem' }}>
               <span>Address line 1</span>
@@ -253,6 +330,7 @@ export default function CheckoutPage() {
                 required
                 style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
               />
+              {fieldErrors.addressLine1 ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.addressLine1}</span> : null}
             </label>
             <label style={{ display: 'grid', gap: '0.35rem' }}>
               <span>Address line 2</span>
@@ -268,12 +346,13 @@ export default function CheckoutPage() {
               <label style={{ display: 'grid', gap: '0.35rem' }}>
                 <span>City</span>
                 <input
-                  type="text"
-                  value={form.city}
-                  onChange={handleChange('city')}
-                  required
-                  style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
-                />
+                type="text"
+                value={form.city}
+                onChange={handleChange('city')}
+                required
+                style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
+              />
+                {fieldErrors.city ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.city}</span> : null}
               </label>
             <label style={{ display: 'grid', gap: '0.35rem' }}>
               <span>Province</span>
@@ -289,6 +368,7 @@ export default function CheckoutPage() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.province ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.province}</span> : null}
             </label>
               <label style={{ display: 'grid', gap: '0.35rem' }}>
                 <span>District</span>
@@ -304,6 +384,7 @@ export default function CheckoutPage() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.district ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.district}</span> : null}
               </label>
               <label style={{ display: 'grid', gap: '0.35rem' }}>
                 <span>Postal code</span>
@@ -314,6 +395,7 @@ export default function CheckoutPage() {
                   required
                   style={{ padding: '0.6rem 0.8rem', borderRadius: '0.75rem', border: '1px solid #cbd5f5' }}
                 />
+                {fieldErrors.postalCode ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.postalCode}</span> : null}
               </label>
             </div>
           </section>
@@ -330,6 +412,7 @@ export default function CheckoutPage() {
                 </option>
               ))}
             </select>
+            {fieldErrors.shippingMethod ? <span style={FIELD_ERROR_STYLE}>{fieldErrors.shippingMethod}</span> : null}
           </section>
           {error ? <p style={{ color: '#ef4444' }}>{error}</p> : null}
           <button
@@ -386,16 +469,33 @@ export default function CheckoutPage() {
                     • Gift cards: -{formatCurrency(totals.breakdown.discounts.giftCards, cart.currency)}
                   </span>
                 ) : null}
+                {totals.breakdown.shipping.discount > 0 ? (
+                  <span>
+                    • Shipping discount: -{formatCurrency(totals.breakdown.shipping.discount, cart.currency)}
+                  </span>
+                ) : null}
               </div>
             ) : null}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
               <span>Shipping</span>
               <span>{formatCurrency(totals.shippingTotal, totals.currency)}</span>
             </div>
+            {totals.breakdown?.shipping.original !== null &&
+            totals.breakdown?.shipping.original !== undefined &&
+            totals.breakdown.shipping.original > totals.shippingTotal ? (
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                Original shipping {formatCurrency(totals.breakdown.shipping.original, totals.currency)}
+              </span>
+            ) : null}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
               <span>Tax</span>
               <span>{formatCurrency(totals.taxTotal, totals.currency)}</span>
             </div>
+            {totals.breakdown?.tax.rate ? (
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                Estimated tax rate {totals.breakdown.tax.rate.toFixed(2)}%
+              </span>
+            ) : null}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
               <span>Total due</span>
               <span>{formatCurrency(totals.total, totals.currency)}</span>

@@ -53,9 +53,9 @@ beforeEach(() => {
   mockPrisma.productCollection.findMany.mockResolvedValue([
     { id: 'col-1', tenantId: 'tenant-1', name: 'Featured', slug: 'featured', position: 0 }
   ])
-  mockPrisma.productCollection.create.mockImplementation(async ({ data }) => ({
+  mockPrisma.productCollection.create.mockImplementation(async (args: { data: Record<string, unknown> }) => ({
     id: 'col-1',
-    ...data
+    ...args.data
   }))
   mockPrisma.productCollection.findFirst.mockResolvedValue({
     id: 'col-1',
@@ -66,10 +66,10 @@ beforeEach(() => {
     visibility: 'PUBLIC',
     position: 0
   })
-  mockPrisma.productCollection.update.mockImplementation(async ({ data }) => ({
+  mockPrisma.productCollection.update.mockImplementation(async (args: { data: Record<string, unknown> }) => ({
     id: 'col-1',
     tenantId: 'tenant-1',
-    ...data
+    ...args.data
   }))
   mockPrisma.product.findFirst.mockResolvedValue({ id: 'prod-1', tenantId: 'tenant-1' })
   mockPrisma.productCollectionAssignment.create.mockResolvedValue({

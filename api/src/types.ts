@@ -3,20 +3,23 @@ import type { Queue } from '@cloudflare/workers-types'
 export interface EnvBindings {
   SESSIONS: KVNamespace
   RATE_LIMIT: KVNamespace
+  TEMP?: KVNamespace
   PRODUCT_MEDIA_BUCKET: R2Bucket
   PROOF_OF_DELIVERY_BUCKET: R2Bucket
   BACKUPS_BUCKET: R2Bucket
   CATALOG_EVENTS?: Queue
   INVENTORY_ALERTS?: Queue
+  TENANT_PROVISIONING?: Queue
   PRODUCT_MEDIA_PUBLIC_BASE_URL?: string
   DATABASE_URL: string
   POSTHOG_HOST?: string
   POSTHOG_API_KEY?: string
-  MEILISEARCH_URL?: string
-  MEILISEARCH_KEY?: string
   BETTERSTACK_LOGS_TOKEN: string
   BETTERSTACK_LOGS_ENDPOINT?: string
   JWT_SECRET: string
+  POSTMARK_API_TOKEN?: string
+  PASSWORD_RESET_EMAIL_FROM?: string
+  FRONTEND_URL?: string
 }
 
 export interface AuthUser {

@@ -6,7 +6,8 @@ tsconfig = "./tsconfig.json"
 
 kv_namespaces = [
   { binding = "SESSIONS", id = "8699ef99d1e14bfba4ce5bf8327e2f4e" },
-  { binding = "RATE_LIMIT", id = "0a6f1312e49d4fa6a85b525f513ce527" }
+  { binding = "RATE_LIMIT", id = "0a6f1312e49d4fa6a85b525f513ce527" },
+  { binding = "TEMP", id = "11111111111111111111111111111111" } # TODO: replace with real namespace ID
 ]
 
 r2_buckets = [
@@ -22,3 +23,7 @@ queue = "catalog-events"
 [[queues.producers]]
 binding = "INVENTORY_ALERTS"
 queue = "inventory-alerts"
+
+[[queues.producers]]
+binding = "TENANT_PROVISIONING"
+queue = "tenant-provisioning"

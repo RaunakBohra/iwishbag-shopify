@@ -1027,6 +1027,8 @@ app.post('/auth/reset-password', async (c) => {
 
 ## Multi-Factor Authentication
 
+> **Backend status:** Authentication API now supports full 2FA lifecycle. `/v1/auth/login` responds with `{ requiresTwoFactor: true, tempToken }` when TOTP is enabled, `/v1/auth/2fa/login` completes the challenge, and `/v1/auth/2fa/setup` / `/v1/auth/2fa/verify` expose secret onboarding + recovery codes.
+
 ### Setup 2FA
 
 ```typescript

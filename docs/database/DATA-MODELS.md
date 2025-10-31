@@ -13,7 +13,15 @@ This guide maps business capabilities to database entities and breaks the modell
 - [ ] Ensure every tenant-scoped table includes `tenant_id` and RLS policy.
 - [ ] Create composite indexes identified in each section.
 - [ ] Add Prisma-level `@@map` annotations where snake_case ⇆ camelCase differs.
-- [ ] Document seed data requirements (plans, permissions, provinces, districts).
+- [x] Document seed data requirements (plans, permissions, provinces, districts).
+
+> 💠 **Seeded fixtures (via `npm run seed:<env>`):**
+> - `SubscriptionPlan` — Free (`free`), Pro (`pro`), Max (`max`) with monthly/yearly pricing, limit columns, `features` JSON, `isActive=true`.
+> - `Permission` — 12 core permissions (`tenant.manage`, `staff.manage`, `catalog.read`, `catalog.write`, `catalog.delete`, `inventory.adjust`, `orders.read`, `orders.fulfill`, `orders.manage`, `discounts.manage`, `analytics.view`, `settings.integrations`).
+> - `Theme` — `modern-default` marked `isDefault` with color/typography/layout JSON config.
+> - `FeatureFlag` — global flags `beta.storefront-search` (25% rollout), `beta.loyalty-programs` (10% rollout, inactive), `logging.extended-audit` (100% rollout).
+> - `Tenant` demo (dev only) — slug `demo-store`, plan `PRO`, seeded `TenantSubscription`, `TenantUsage`, owner role with all permissions, user `demo.owner@example.com`, and default `Store`.
+> - `Province` / `District` seeds are gated until the corresponding Prisma models land; current runner logs `skipped: 'province/district tables unavailable'` when absent.
 
 ---
 
@@ -21,8 +29,8 @@ This guide maps business capabilities to database entities and breaks the modell
 
 | Capability | Tables | Atomic Tasks |
 |------------|--------|--------------|
-| Tenant provisioning | `tenants`, `subscription_plans`, `tenant_settings` | [ ] Implement RLS for tenants. [ ] Seed default plans (Free, Pro, Max). [ ] Add trigger to update `updated_at`. |
-| User directory | `users`, `user_roles`, `role_permissions`, `permissions` | [ ] Seed base roles/permissions. [ ] Create unique composite index on `(tenant_id, email)`. [ ] Add soft-delete column (`deleted_at`) constraints. |
+| Tenant provisioning | `tenants`, `subscription_plans`, `tenant_settings`, `tenant_provisioning_runs` | [ ] Implement RLS for tenants. [ ] Seed default plans (Free, Pro, Max). [ ] Add trigger to update `updated_at`. |
+| User directory | `users`, `user_roles`, `role_permissions`, `permissions`, `login_attempts`, `password_reset_tokens` | [ ] Seed base roles/permissions. [ ] Create unique composite index on `(tenant_id, email)`. [ ] Add soft-delete column (`deleted_at`) constraints. [x] Capture 2FA metadata + recovery codes, login attempts, password reset tokens. |
 | Audit trail | `audit_logs` | [ ] Define enum for event types. [ ] Partition table monthly. [ ] Index on `(tenant_id, created_at DESC)`. |
 
 ---
@@ -53,7 +61,7 @@ This guide maps business capabilities to database entities and breaks the modell
 | Capability | Tables | Atomic Tasks |
 |------------|--------|--------------|
 | Customers | `customers`, `customer_addresses`, `customer_tags` | [ ] Hash PII sensitive fields where applicable. [ ] Add unique composite `(tenant_id, email)` with NULL allowed. |
-| Carts | `carts`, `cart_items` | [ ] `expires_at` column with TTL cleanup job. [ ] Add JSONB `attributes` column for metafields. |
+| Carts | `carts`, `cart_items`, `cart_sessions`, `cart_discounts`, `checkout_sessions`, `inventory_reservations` | [x] Store shopper contact + locale metadata on cart. [x] Track per-line discount/tax totals. [x] Persist checkout sessions + inventory holds. [ ] Add background TTL cleanup for expired sessions/holds. |
 | Orders | `orders`, `order_items`, `order_shipping_lines`, `order_taxes`, `order_events`, `order_fulfillments` | [ ] Use enum `order_status`. [ ] Populate `subtotal`, `total`, `tax_total` via database trigger for integrity. [ ] Index `orders(tenant_id, created_at DESC)`. |
 | Payments | `payments`, `payment_attempts`, `refunds` | [ ] Store provider payload encrypted. [ ] Add unique constraint `provider_id` to avoid duplicates. |
 | Fulfillment | `fulfillments`, `fulfillment_items`, `fulfillment_events` | [ ] Track `tracking_company`, `tracking_number` unique for active fulfillments. |
@@ -117,4 +125,3 @@ This guide maps business capabilities to database entities and breaks the modell
 - [ ] Implement deletion cascade tests in CI using Prisma + Vitest.
 - [ ] Document anonymization routine for user deletion requests.
 - [ ] Schedule quarterly schema reviews to align with product roadmap.
-

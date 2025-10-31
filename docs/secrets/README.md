@@ -1,88 +1,60 @@
-# 🔐 Secrets Registry
+# 🔐 Secrets Handling (KISS Edition)
 
-> Store actual credentials in your password manager (e.g., 1Password, Bitwarden). Use this file to note what exists, where it lives, and who owns rotation.
+> Keep it simple: developers store secrets locally in ignored `.env` files, and CI/Workers use GitHub + Cloudflare secrets. No external password managers required.
 
 ---
 
-## 1. Cloudflare
-- **API Token (Workers + DNS + R2 + Pages + Access)**  
-  - Location: 1Password vault `NepShop Infra` → item `Cloudflare API Token`  
-  - Owner: DevOps lead  
-  - Rotation cadence: 90 days  
-  - Consumed by: Wrangler CLI, GitHub Actions (`CLOUDFLARE_API_TOKEN`)
-- **Account ID**: `610762493d34333f1a6d72a037b345cf`
-- **KV Namespaces**  
-  - `NEPSHOP_SESSIONS` → `8699ef99d1e14bfba4ce5bf8327e2f4e`  
-  - `NEPSHOP_RATE_LIMIT` → `0a6f1312e49d4fa6a85b525f513ce527`
-- **R2 Buckets**  
-  - `nepshop-product-media` (binding `nepshop_product_media`)  
-  - `nepshop-proof-of-delivery` (binding `nepshop_proof_of_delivery`)  
-  - `nepshop-backups` (binding `nepshop_backups`)
-- **Cloudflare Access**  
-  - App: `internal-admin.iwishbag.store`  
-  - Policy: Allow → admin@nepshop.com, founder@nepshop.com (update as team grows)
-- **Pages Projects**  
-  - `nepshop-web`, `nepshop-merchant`, `nepshop-storefront` (production branch `main`)
+## 1. Working Principle
 
-## 2. Neon PostgreSQL
-- **Project**: `iwishbag.store`  
-- **Branches**: `main` (prod), `staging`, `dev`  
-- **Connection URLs**: 1Password vault `NepShop Infra` → items  
-  - `Neon Prod (iwishbag.store)` → pooled URI `postgresql://neondb_owner:…@ep-long-mud-a1yxup9r-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require`  
-  - `Neon Staging (iwishbag.store)` → pooled URI `postgresql://neondb_owner:…@ep-billowing-sea-a1x8aric-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require`  
-  - `Neon Dev (iwishbag.store)` → pooled URI `postgresql://neondb_owner:…@ep-fragrant-lake-a12tu03e-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require`  
-- **Notes**: PITR enabled; nightly snapshots configured via Neon console; keep direct URLs alongside pooled for migration tooling.
+1. **Local development** – copy each workspace’s `.env.example` file to `.env.local` and fill in secrets manually. These files are ignored by git, so they stay on your machine.
+2. **Source control / CI** – add the same secrets to GitHub repository secrets (`Settings → Secrets and variables → Actions`). Use environment scoping if you want different values for staging vs production.
+3. **Cloudflare Workers / GitHub** – run `pnpm secrets:sync <service> --env=<env>` (preferred) to push updates; fall back to `gh secret set` / `npx wrangler secret put` if the script doesn’t support the service yet.
+4. **Backups** – keep an encrypted archive (e.g., `secrets-YYYY-MM-DD.7z` protected with a team-shared passphrase) containing the latest `.env.local` values so new teammates can bootstrap without pinging everyone.
 
-## 3. AWS (SQS, SES, etc.)
-- **Account**: `iwishbag-store` (ID `988162738841`, region `ap-south-1`)  
-- **IAM User**: `iwishbag-store-worker`  
-  - Access key stored in 1Password item `AWS Access Key – iwishbag-store-worker` (from `iwishbag-store_accessKeys.csv`)  
-  - GitHub Actions secrets:  
-    - `AWS_SQS_ACCESS_KEY_ID` = `AKIAYWBJYE26PDT77T3S`  
-    - `AWS_SQS_SECRET_ACCESS_KEY` = stored in CI secret manager  
-  - Rotation cadence: 90 days
-- **Queues** (once created)  
-- Queues & URLs:
-  - `iwishbag-store-jobs` → `https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-jobs`
-  - `iwishbag-store-jobs-dlq` → `https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-jobs-dlq`
-  - `iwishbag-store-webhooks` → `https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-webhooks`
-  - `iwishbag-store-webhooks-dlq` → `https://sqs.ap-south-1.amazonaws.com/988162738841/iwishbag-store-webhooks-dlq`
-  - Update GitHub secrets: `AWS_SQS_JOBS_URL`, `AWS_SQS_WEBHOOKS_URL`, `AWS_SQS_DLQ_JOBS_URL`, `AWS_SQS_DLQ_WEBHOOKS_URL`
-- **SES**
-  - Domain `iwishbag.store` verified; SMTP credentials stored in 1Password item `AWS SES – iwishbag.store`
-  - GitHub secrets: `SES_SMTP_USER`, `SES_SMTP_PASS`
+## 2. Reference Table
 
-## 4. Integrations
-- **PostHog**
-  - Project: `iwishbag-store`
-  - Vault item: `PostHog – iwishbag-store`
-  - GitHub/Env secrets:
-    - `POSTHOG_HOST` = `https://us.i.posthog.com`
-    - `NEXT_PUBLIC_POSTHOG_HOST` = `https://us.i.posthog.com`
-    - `NEXT_PUBLIC_POSTHOG_KEY` = `phc_leTubckNTo9S8sc22WHoR2tCrNjLErit7FOR6ZY34Fy`
-    - `POSTHOG_API_KEY` = phx_azbdeZdAkAUjhhIGlWJXwg6sHQisvaPxfzmpuMflrdktzwX
-- **Better Stack**
-  - Organization: `iwishbag-store`
-  - Vault item: `Better Stack – iwishbag-store`
-  - API tokens:
-    - Uptime (REST) token: `Xkrnar12kbUfbHiyvbZG3bYr`
-    - Logs/Telemetry token: `kny6K15TWYaGz73SK9HXFQZD`
-  - GitHub secrets to add:
-    - `BETTERSTACK_TOKEN` (uptime API)
-    - `BETTERSTACK_LOGS_TOKEN` (telemetry ingestion)
-  - Monitors to configure: `https://iwishbag.store`, `https://merchant.iwishbag.store`, `https://api.iwishbag.store/health`
-- **JWT Secret**
-  - Vault item: `API JWT Secret – iwishbag-store`
-  - GitHub secret: `JWT_SECRET`
-  - Cloudflare secret: `JWT_SECRET`
-*** End Patch
+| Service | Secret(s) | Local File | GitHub Secret | Cloudflare Secret | Notes |
+|---------|-----------|------------|---------------|-------------------|-------|
+| Cloudflare | `CLOUDFLARE_API_TOKEN` | `scripts/.env.local` | `CLOUDFLARE_API_TOKEN` | n/a | Needed for Deployments + wrangler. |
+| Cloudflare KV (temp sessions) | n/a | managed via wrangler | n/a | binding `TEMP` | Used for 2FA + password reset flows; create namespace and update `wrangler.toml`. |
+| Neon (dev) | `DATABASE_URL`, `DATABASE_POOLED_URL`, `DATABASE_URL_APP_USER`, `DATABASE_URL_APP_ADMIN` | `api/.env.local`, `api/.env.dev` | `DATABASE_URL_DEV`, `DATABASE_POOLED_URL_DEV` (optional) | same names | Dev branch connection + RLS helpers. |
+| Neon (staging) | `DATABASE_URL_STAGING`, `DATABASE_POOLED_URL` | `api/.env.local`, `api/.env.staging` | `DATABASE_URL_STAGING` | `DATABASE_URL_STAGING` | Staging migrations + Workers. |
+| Neon (prod) | `DATABASE_URL`, `DATABASE_POOLED_URL` | `api/.env.local`, `api/.env.prod` | same names | same names | Production migrations + Workers. |
+| AWS SES | `SES_SMTP_USER`, `SES_SMTP_PASS` | `api/.env.local` | same names | same names | Create per-environment credentials in AWS console. |
+| AWS SQS | `AWS_SQS_ACCESS_KEY_ID`, `AWS_SQS_SECRET_ACCESS_KEY`, queue URLs | `api/.env.local` | same names | same names | Queue URLs can stay in code as constants if non-secret. |
+| Postmark (inventory alerts & auth emails) | `POSTMARK_API_TOKEN`, `INVENTORY_ALERT_EMAIL_FROM`, `INVENTORY_ALERT_EMAIL_TO`, `PASSWORD_RESET_EMAIL_FROM` | `workers/inventory-alerts/.env.local`, `api/.env.local` | `POSTMARK_API_TOKEN`, `INVENTORY_ALERT_EMAIL_FROM`, `INVENTORY_ALERT_EMAIL_TO`, `PASSWORD_RESET_EMAIL_FROM` | same names | Used for low-stock alerts and password reset emails. |
+| Alert Webhook | `INVENTORY_ALERT_WEBHOOK_URL` | `workers/inventory-alerts/.env.local` | `INVENTORY_ALERT_WEBHOOK_URL` | `INVENTORY_ALERT_WEBHOOK_URL` | Optional webhook endpoint for external integrations. |
+| PostHog | `POSTHOG_API_KEY`, `POSTHOG_HOST`, `NEXT_PUBLIC_POSTHOG_KEY` | `api/.env.local`, `frontend/.env.local` | `POSTHOG_API_KEY`, `POSTHOG_HOST`, `NEXT_PUBLIC_POSTHOG_KEY` | `POSTHOG_API_KEY` | Client key is public; keep server key secret. |
+| Better Stack | `BETTERSTACK_TOKEN`, `BETTERSTACK_LOGS_TOKEN` | `scripts/.env.local` | same names | same names | Only required once monitoring is enabled. |
+| JWT | `JWT_SECRET` | `api/.env.local` | `JWT_SECRET` | `JWT_SECRET` | Rotate manually when needed. |
+| Sparrow SMS | `SPARROW_SMS_TOKEN` | `api/.env.local` | `SPARROW_SMS_TOKEN` | `SPARROW_SMS_TOKEN` | Pending provider approval. |
+| PagerDuty | `PAGERDUTY_INTEGRATION_KEY` | `scripts/.env.local` | `PAGERDUTY_INTEGRATION_KEY` | `PAGERDUTY_INTEGRATION_KEY` | Only after PagerDuty service exists. |
 
+For any new secret, make sure to:
+- Add it to the relevant `.env.example` file so teammates know it exists.
+- Document the GitHub/Cloudflare secret names in this table.
 
+## 3. Minimal Rotation Flow
+1. Regenerate the value in the upstream dashboard (AWS, Cloudflare, etc.).
+2. Update your local `.env.local` and share the encrypted archive update.
+3. Run the appropriate sync script (see `docs/secrets/SECRETS-MATRIX.md`) to push GitHub and Cloudflare secrets; fall back to `gh secret set` / `wrangler secret put` if needed.
+4. Verify the app deploys/tests successfully, then delete the old value.
+
+## 4. Quick FAQ
+- **Where are secrets backed up?** → Encrypted 7z archive in our shared drive, updated whenever credentials change.
+- **How do I add a new secret?** → Update `.env.example`, set it locally, add to GitHub/Cloudflare, and record it in the table above.
+- **Do we need a secrets sync script?** → Yes. Use the `pnpm secrets:sync` utilities described in the matrix; manual steps are the fallback.
+
+## 5. Service Notes
+- **Neon** – Console lives at <https://console.neon.tech>. When you rotate a database password, update `api/.env.local`, GitHub secrets, and the relevant Cloudflare Worker secrets right away.
+- **AWS** – IAM user `iwishbag-store-worker` owns the SQS access keys; keep the latest CSV in the encrypted archive. Queue URLs are public and can be hard-coded.
+- **PostHog** – Free tier is fine for now. Production server key should live in GitHub/Workers only; local `.env` can use staging key.
+- **Better Stack** – Hold off on adding secrets until monitoring is enabled; meanwhile keep tokens in the encrypted backup only.
+- **Sparrow SMS / PagerDuty** – Add rows to the reference table as soon as credentials are issued.
 ---
 
 ### Usage Guidelines
-1. Update this registry whenever secrets are created, rotated, or revoked.  
-2. Never commit raw secrets; reference vault locations only.  
-3. Include rotation owner and cadence so nothing expires unexpectedly.  
-4. For GitHub Actions, note the secret names added (`Settings → Secrets and variables → Actions`).  
-5. Archive old values in the vault with timestamps before rotating.
+1. Never commit raw secrets; `.env.example` files should only contain placeholder text.  
+2. When sharing with teammates, use the encrypted archive or direct message—avoid plaintext channels.  
+3. Keep GitHub/Cloudflare secrets in sync whenever local values change.  
+4. Update this doc’s reference table whenever a new secret is introduced.

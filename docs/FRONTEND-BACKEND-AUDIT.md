@@ -655,8 +655,8 @@ The frontend UI/UX is **fully connected to the backend APIs**. All pages are mak
 **Audit Completed**: October 17, 2025
 **Status**: PASSED WITH CONFIGURATION NOTE
 
-## Telemetry & Testing TODOs (Storefront Checkout)
+## Telemetry & Testing Checklist (Storefront Checkout)
 
-- Instrument `/public/v1/storefront/:tenant/cart/checkout` and `/cart/checkout/:sessionId` with Better Stack + PostHog dashboards for session creation/confirmation/submission signals.
-- Add Playwright coverage for the storefront cart → checkout → confirmation happy path (include province/district selection).
-- Ensure Prisma migrations `20251024221500_cart_sessions_checkout` and `20251024230000_checkout_sessions` are deployed to staging + production, then document verification steps.
+- [x] Better Stack + PostHog events land for `storefront.checkout.{started,confirmed,submitted}`; see the runbook in `docs/API-CONNECTION-SUMMARY.md` for dashboard queries and alerts.
+- [x] Playwright flow added (`frontend/tests/storefront.spec.ts` → “completes cart checkout flow”); set `PLAYWRIGHT_TENANT_SLUG=demo-store` before running `npm run --workspace frontend test:e2e`.
+- [x] Prisma migrations `20251024221500_cart_sessions_checkout` and `20251024230000_checkout_sessions` deployed to the shared Neon dev branch (`npx prisma migrate deploy`). Repeat the same command in staging/production before shipping checkout.

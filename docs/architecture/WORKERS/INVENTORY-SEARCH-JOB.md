@@ -1,14 +1,12 @@
 # 🛠️ Inventory & Search Worker
 
-> Cloudflare Queue + Worker pipeline that keeps product inventory snapshots and MeiliSearch documents synchronized with primary Postgres.
+> Cloudflare Queue + Worker pipeline that keeps product inventory snapshots synchronized with primary Postgres.
 
 ---
 
 ## 1. Problem Statement
-- Write-side catalog services (product/variant/media) mutate Prisma models synchronously; we currently have no mechanism to:
-  - Recompute aggregated inventory quantities per product.
-  - Push search-friendly payloads into MeiliSearch.
-- MeiliSearch favours near-real-time updates, but we must avoid blocking API requests on external calls.
+- Write-side catalog services (product/variant/media) mutate Prisma models synchronously; we currently have no mechanism to recompute aggregated inventory quantities per product.
+- Storefront APIs rely on up-to-date inventory snapshots so that Prisma-powered search queries stay responsive without expensive joins.
 - Inventory maths require cross-table reads (variants, allocations, reservations) that should run outside the request path.
 
 **Goal:** Deliver an eventually consistent, observable worker that processes catalog mutations and fans out to inventory + search updates within seconds.
@@ -28,9 +26,6 @@ Cloudflare Queue Consumer (CatalogWorker)
    │     ├─ fetch latest product + variants
    │     ├─ recompute inventory snapshot (tx)
    │     └─ write to product_inventory table
-   ├─ Search Pipeline
-   │     ├─ serialize product document (multi-language support)
-   │     └─ upsert into MeiliSearch index `products_<tenant>`
    └─ Ack + metrics
 
 Failing messages ► Cloudflare Queue Dead Letter (CATALOG_EVENTS_DLQ)
@@ -74,12 +69,7 @@ Helper `enqueueCatalogEvent(env, payload)` writes JSON to `CATALOG_EVENTS`.
    - Execute `SELECT SUM(variants.inventory - variants.reserved) ...` using Prisma `$transaction`.
    - Update `product_inventory` table (upsert). Table holds `available`, `reserved`, `incoming`, `updatedAt`.
    - Emit metric `inventory_update_ms`.
-4. **Search Pipeline:**
-   - Fetch product with relations (variants, images, tags, collections) using `read replica`.
-   - Build MeiliSearch document shape (Nepali/English titles, price range, facets).
-   - Call `meiliClient.index(indexName).addDocuments([doc], { primaryKey: 'id' })`.
-   - On deletion events, call `deleteDocument(productId)`.
-5. **Acknowledgement:** Only ack message when both pipelines succeed.
+4. **Acknowledgement:** Ack the message once inventory recompute succeeds.
 
 ---
 
@@ -90,7 +80,6 @@ Helper `enqueueCatalogEvent(env, payload)` writes JSON to `CATALOG_EVENTS`.
   - Capture context (payload, error, attempt) via `logToBetterStack`.
   - After max attempts, forward to DLQ (`CATALOG_EVENTS_DLQ`).
   - DLQ handler (manual or scheduled worker) can replay after incident resolution.
-- MeiliSearch-specific transient errors (e.g., 429) ⇒ respect `retry-after` header; requeue with incremental delay.
 
 ---
 
@@ -99,7 +88,6 @@ Helper `enqueueCatalogEvent(env, payload)` writes JSON to `CATALOG_EVENTS`.
 **Metrics (Workers Analytics Engine)**
 - `catalog_events_processed_total` (labels: eventType, outcome)
 - `inventory_update_duration_ms`
-- `search_upsert_duration_ms`
 - `catalog_events_inflight`
 
 **Logs**
@@ -117,7 +105,6 @@ Helper `enqueueCatalogEvent(env, payload)` writes JSON to `CATALOG_EVENTS`.
 |---------|------|-------------|
 | `CATALOG_EVENTS` | Queue | Primary event stream |
 | `CATALOG_EVENTS_DLQ` | Queue | Dead-letter storage |
-| `MEILISEARCH_URL` / `MEILISEARCH_KEY` | Secrets | Search credentials |
 | `DATABASE_URL` | Secret | Postgres connection (Neon read/write) |
 
 Worker deployed via `wrangler.toml` under `[queues.consumers]`.
@@ -129,7 +116,7 @@ Worker deployed via `wrangler.toml` under `[queues.consumers]`.
 1. Add `enqueueCatalogEvent` helper + wire into product/variant/media services (within transactions post-commit).
 2. Scaffold Cloudflare Worker (`workers/catalog-events/index.ts`) with queue consumer boilerplate.
 3. Implement inventory recompute module shared between worker & API for reusability (`inventory.service.ts`).
-4. Create MeiliSearch client wrapper with retry/backoff + index naming conventions.
+4. Expose shared inventory snapshot formatter so storefront search responses stay consistent with worker output.
 5. Provision queues via Terraform/CLI; document runbooks for replays.
-6. Extend Vitest with worker unit tests using queue payload fixtures + mocked Prisma/Meili clients.
+6. Extend Vitest with worker unit tests using queue payload fixtures + mocked Prisma client.
 7. Update `docs/api/CATALOG-SPRINT.md` & deployment checklist once worker is live.

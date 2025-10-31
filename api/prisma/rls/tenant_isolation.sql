@@ -10,7 +10,7 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  PERFORM set_config('app.tenant_id', tenant, true);
+  PERFORM set_config('app.tenant_id', tenant, false);
 END;
 $$;
 
@@ -19,7 +19,7 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  PERFORM set_config('app.tenant_id', '', true);
+  PERFORM set_config('app.tenant_id', '', false);
 END;
 $$;
 
@@ -34,8 +34,22 @@ $$;
 -- RLS for Tenant table (self lookup)
 ALTER TABLE "Tenant" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_self_isolation ON "Tenant";
-CREATE POLICY tenant_self_isolation ON "Tenant"
-USING ("id" = app.current_tenant());
+DROP POLICY IF EXISTS tenant_self_isolation_select ON "Tenant";
+DROP POLICY IF EXISTS tenant_self_isolation_insert ON "Tenant";
+DROP POLICY IF EXISTS tenant_self_isolation_update ON "Tenant";
+
+CREATE POLICY tenant_self_isolation_select ON "Tenant"
+  FOR SELECT
+  USING ("id" = app.current_tenant());
+
+CREATE POLICY tenant_self_isolation_insert ON "Tenant"
+  FOR INSERT
+  WITH CHECK ("id" = app.current_tenant());
+
+CREATE POLICY tenant_self_isolation_update ON "Tenant"
+  FOR UPDATE
+  USING ("id" = app.current_tenant())
+  WITH CHECK ("id" = app.current_tenant());
 
 ALTER TABLE "TenantSubscription" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_subscription_isolation ON "TenantSubscription";
@@ -94,7 +108,6 @@ CREATE POLICY invite_isolation ON "Invite"
 USING ("tenantId" = app.current_tenant())
 WITH CHECK ("tenantId" = app.current_tenant());
 
-ALTER TABLE "Tenant" FORCE ROW LEVEL SECURITY;
 DO $$ BEGIN EXECUTE 'ALTER TABLE "TenantSubscription" FORCE ROW LEVEL SECURITY;'; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 DO $$ BEGIN EXECUTE 'ALTER TABLE "TenantUsage" FORCE ROW LEVEL SECURITY;'; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 

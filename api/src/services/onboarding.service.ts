@@ -1,4 +1,5 @@
 import { HTTPException } from 'hono/http-exception'
+import { Prisma } from '@prisma/client'
 import type { EnvBindings, AuthUser } from '../types'
 import { getPrisma } from '../lib/prisma'
 
@@ -64,9 +65,10 @@ export async function upsertOnboardingStep(
     }
   })
 
-  const steps = (existing.steps as Record<string, unknown> | null) ?? {}
+  const existingSteps = (existing.steps as Record<string, Prisma.InputJsonValue> | null) ?? {}
+  const steps: Record<string, Prisma.InputJsonValue> = { ...existingSteps }
   if (payload.data) {
-    steps[String(step)] = payload.data
+    steps[String(step)] = payload.data as Prisma.InputJsonValue
   }
 
   const markCompleted = payload.completed === true

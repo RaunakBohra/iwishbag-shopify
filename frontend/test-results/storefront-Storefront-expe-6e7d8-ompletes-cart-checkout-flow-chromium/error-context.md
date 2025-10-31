@@ -1,0 +1,60 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation "Breadcrumb" [ref=e3]:
+      - link "Back to products" [ref=e4] [cursor=pointer]:
+        - /url: /demo-store/products?
+      - group "Language" [ref=e5]:
+        - link "EN" [ref=e6] [cursor=pointer]:
+          - /url: /demo-store/products/everest-expedition-backpack
+        - link "ने" [ref=e7] [cursor=pointer]:
+          - /url: /demo-store/products/everest-expedition-backpack?locale=ne
+    - generic [ref=e8]:
+      - img "Demo Everest expedition backpack" [ref=e10]
+      - generic [ref=e11]:
+        - heading "Everest Expedition Backpack" [level=1] [ref=e13]
+        - generic [ref=e15]: NPR 4,800.00
+        - paragraph [ref=e16]: 42 in stock
+        - button "Add to cart" [ref=e17] [cursor=pointer]
+        - generic [ref=e18]:
+          - heading "Description" [level=2] [ref=e19]
+          - paragraph [ref=e20]: Durable 35L backpack optimised for Himalayan treks. Includes waterproof cover, laptop sleeve, and ergonomic support.
+  - button "Cart (1)" [expanded] [ref=e21] [cursor=pointer]: Cart (1)1
+  - dialog "Shopping cart" [ref=e23]:
+    - banner [ref=e24]:
+      - heading "Your Cart" [level=2] [ref=e25]
+      - button "Close cart" [ref=e26] [cursor=pointer]: ×
+    - list [ref=e28]:
+      - listitem [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - text: Everest Expedition Backpack
+            - paragraph [ref=e32]: DEMO-BAG-01
+          - button "Remove" [ref=e33] [cursor=pointer]
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - text: Qty
+            - spinbutton "Quantity for Everest Expedition Backpack" [ref=e36]: "1"
+          - generic [ref=e37]: NPR 4,800.00
+    - contentinfo [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: Subtotal
+        - generic [ref=e41]: NPR 4,800.00
+      - generic [ref=e42]:
+        - generic [ref=e43]: Discounts
+        - generic [ref=e44]: "-NPR 0.00"
+      - generic [ref=e45]:
+        - generic [ref=e46]: Shipping
+        - generic [ref=e47]: Calculated at checkout
+      - generic [ref=e48]:
+        - generic [ref=e49]: Tax
+        - generic [ref=e50]: NPR 0.00
+      - generic [ref=e51]:
+        - generic [ref=e52]: Total
+        - generic [ref=e53]: NPR 4,800.00
+      - button "Clear cart" [ref=e54] [cursor=pointer]
+      - button "Go to checkout" [ref=e55] [cursor=pointer]
+  - alert [ref=e56]
+```
