@@ -14,6 +14,7 @@ import type { CartPricingBreakdownResource } from './cart.service'
 import { applyUsageDelta } from './usage.service'
 import { calculateCartPricing } from './pricing.service'
 import type { PricingResult } from './pricing.service'
+import { recordOrderCreated } from './orders.service'
 
 const RESERVATION_DURATION_MINUTES = 15
 
@@ -803,6 +804,11 @@ export async function submitCheckoutSession(
             }))
           }
         }
+      })
+
+      await recordOrderCreated(tx, order.id, authUser.userId ?? null, {
+        checkoutSessionId: session.id,
+        source: 'checkout_session'
       })
 
       await tx.checkoutSession.update({

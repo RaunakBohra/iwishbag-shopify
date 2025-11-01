@@ -13,6 +13,8 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run --workspace admin dev\" \"npm run --workspace api dev\"",
+    "dev:backend": "concurrently \"npm run --workspace api dev\" \"npm run --workspace workers/catalog-events dev\" \"npm run --workspace workers/inventory-alerts dev\"",
+    "dev:all": "concurrently \"npm run --workspace api dev\" \"npm run --workspace workers/catalog-events dev\" \"npm run --workspace workers/inventory-alerts dev\" \"npm run --workspace admin dev\" \"npm run --workspace frontend dev\"",
     "build": "npm run --workspace admin build && npm run --workspace api build",
     "deploy": "npm run --workspace admin build && npm run --workspace api deploy",
     "prisma:migrate": "npm run --workspace api prisma:migrate",
