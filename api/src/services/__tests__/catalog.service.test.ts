@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { listProducts, createProduct, deleteProduct } from '../catalog.service'
+import { getPlanLimits } from '../tenant.service'
 import type { EnvBindings, AuthUser } from '../../types'
 
 const authUser: AuthUser = {
@@ -143,6 +144,19 @@ describe('catalog service', () => {
         productId: 'prod-1'
       })
     )
+  })
+
+  it('prevents creating products when limit reached', async () => {
+    const limits = getPlanLimits('FREE')
+    mockPrisma.tenant.findUnique.mockResolvedValueOnce({
+      id: 'tenant-1',
+      plan: 'FREE',
+      usage: { products: limits.products, variants: 0, images: 0 }
+    })
+
+    await expect(createProduct(env, authUser, { title: 'Example', price: 10 })).rejects.toMatchObject({
+      status: 429
+    })
   })
 
   it('soft deletes product and decrements usage', async () => {

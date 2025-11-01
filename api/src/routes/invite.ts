@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import type { AppEnv } from '../types'
-import { requireAuth, requireRole } from '../middleware/auth'
+import { requireAuth, requireRole, requirePermission } from '../middleware/auth'
 import {
   listInvites,
   createInvite,
@@ -19,6 +19,7 @@ const createSchema = z.object({
 })
 
 invite.use('*', requireAuth)
+invite.use('*', requirePermission('staff.manage'))
 
 invite.get('/', requireRole(['OWNER', 'PLATFORM_ADMIN']), async (c) => {
   const authUser = c.var.authUser!

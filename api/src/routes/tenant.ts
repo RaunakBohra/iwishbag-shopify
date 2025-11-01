@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import type { AppEnv } from '../types'
-import { requireAuth, requireRole } from '../middleware/auth'
+import { requireAuth, requireRole, requirePermission } from '../middleware/auth'
 import { getCurrentTenant, updateTenant, getTenantStats } from '../services/tenant.service'
 
 const tenant = new Hono<AppEnv>()
@@ -19,14 +19,20 @@ tenant.get('/current', async (c) => {
   return c.json({ data: tenantInfo })
 })
 
-tenant.patch('/current', requireRole(['OWNER', 'PLATFORM_ADMIN']), zValidator('json', updateSchema), async (c) => {
+tenant.patch(
+  '/current',
+  requireRole(['OWNER', 'PLATFORM_ADMIN']),
+  requirePermission('tenant.manage'),
+  zValidator('json', updateSchema),
+  async (c) => {
   const authUser = c.var.authUser!
   const update = c.req.valid('json')
   const tenantInfo = await updateTenant(c.env, authUser, update)
   return c.json({ data: tenantInfo })
-})
+  }
+)
 
-tenant.get('/current/stats', async (c) => {
+tenant.get('/current/stats', requirePermission('tenant.manage'), async (c) => {
   const authUser = c.var.authUser!
   const stats = await getTenantStats(c.env, authUser)
   return c.json({ data: stats })

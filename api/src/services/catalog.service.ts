@@ -81,7 +81,7 @@ export async function createProduct(env: EnvBindings, authUser: AuthUser, payloa
     const limits = getPlanLimits(tenant.plan)
     const currentProducts = tenant.usage?.products ?? 0
     if (currentProducts >= limits.products) {
-      throw new HTTPException(409, { message: 'Product limit reached for current plan' })
+      throw new HTTPException(429, { message: 'Product limit reached for current plan' })
     }
 
     const created = await tx.product.create({

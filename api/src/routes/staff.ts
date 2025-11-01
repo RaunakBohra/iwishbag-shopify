@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import type { AppEnv } from '../types'
-import { requireAuth, requireRole } from '../middleware/auth'
+import { requireAuth, requireRole, requirePermission } from '../middleware/auth'
 import { listStaff, createStaff, updateStaff, removeStaff } from '../services/staff.service'
 
 const staff = new Hono<AppEnv>()
@@ -22,6 +22,7 @@ const updateSchema = z.object({
 })
 
 staff.use('*', requireAuth)
+staff.use('*', requirePermission('staff.manage'))
 
 staff.get('/', async (c) => {
   const authUser = c.var.authUser!

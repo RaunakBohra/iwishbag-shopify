@@ -12,16 +12,16 @@
 
 ## 2. Tenant & Staff Management
 - [x] Implement invite token flow using signed KV-backed tokens (15 min TTL).
-- [ ] Enforce RBAC permissions (`staff.manage`, `tenant.update`) in middleware.
-- [ ] Return plan usage stats from `/v1/tenants/current/stats`.
-- [ ] Ensure plan limits trigger 429 when staff/products exceed allowance.
-- [ ] Cover flows with integration tests (invite lifecycle + plan limit enforcement).
+- [x] Enforce RBAC permissions (`staff.manage`, `tenant.update`) in middleware.
+- [x] Return plan usage stats from `/v1/tenants/current/stats`.
+- [x] Ensure plan limits trigger 429 when staff/products exceed allowance.
+- [x] Cover flows with integration tests (invite lifecycle + plan limit enforcement).
 
 ## 3. Pricing & Discounts
-- [ ] Model tiered discounts (amount/percentage/buy-X-get-Y) with validation helpers.
-- [ ] Persist discount usage in `discount_usages` with advisory locks to enforce limits.
-- [ ] Expose discount eligibility endpoint for storefront/cart usage.
-- [ ] Add unit tests covering overlapping discount rules + concurrency.
+- [x] Model tiered discounts (amount/percentage/buy-X-get-Y) with validation helpers.
+- [x] Persist discount usage in `discount_usages` with advisory locks to enforce limits.
+- [x] Expose discount eligibility endpoint for storefront/cart usage.
+- [x] Add unit tests covering overlapping discount rules + concurrency.
 
 ## 4. Cart, Checkout & Orders
 - [x] Stand up API-backed cart service (sessions, line mutations, totals snapshots).

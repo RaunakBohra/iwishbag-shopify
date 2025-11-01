@@ -111,11 +111,46 @@ export async function getTenantStats(env: EnvBindings, authUser: AuthUser) {
     throw new HTTPException(404, { message: 'Tenant not found' })
   }
 
+  const limits = PLAN_LIMITS[tenant.plan]
+  const usageSnapshot = tenant.usage ?? {}
+  const usageTotals = {
+    staff: usageSnapshot.staff ?? activeStaffCount,
+    products: usageSnapshot.products ?? productsCount,
+    variants: usageSnapshot.variants ?? 0,
+    images: usageSnapshot.images ?? 0,
+    orders: usageSnapshot.orders ?? 0
+  }
+
   return {
-    staff: activeStaffCount,
-    invites: invitesCount,
-    products: productsCount,
-    limits: PLAN_LIMITS[tenant.plan]
+    plan: {
+      tier: tenant.plan,
+      status: tenant.planStatus,
+      trialEndsAt: tenant.trialEndsAt,
+      limits
+    },
+    usage: {
+      staff: {
+        active: activeStaffCount,
+        pendingInvites: invitesCount,
+        total: usageTotals.staff,
+        remaining: Math.max(limits.staff - usageTotals.staff, 0)
+      },
+      products: {
+        total: usageTotals.products,
+        remaining: Math.max(limits.products - usageTotals.products, 0)
+      },
+      variants: {
+        total: usageTotals.variants,
+        remaining: Math.max(limits.variants - usageTotals.variants, 0)
+      },
+      images: {
+        total: usageTotals.images,
+        remaining: Math.max(limits.images - usageTotals.images, 0)
+      },
+      orders: {
+        total: usageTotals.orders
+      }
+    }
   }
 }
 

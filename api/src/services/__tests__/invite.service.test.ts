@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createInvite, listInvites, revokeInvite } from '../invite.service'
+import { createInvite, listInvites, resendInvite, revokeInvite, acceptInvite } from '../invite.service'
 import type { EnvBindings, AuthUser } from '../../types'
+import { createKvSignedToken } from '../../lib/kv-token'
 
 const authUser: AuthUser = {
   userId: 'user-owner',
@@ -18,8 +19,10 @@ const mockPrisma = {
     count: vi.fn()
   },
   user: {
+    findFirst: vi.fn(),
     count: vi.fn(),
-    findUnique: vi.fn()
+    findUnique: vi.fn(),
+    create: vi.fn()
   },
   tenant: {
     findUnique: vi.fn()
@@ -78,9 +81,16 @@ beforeEach(() => {
   mockPrisma.invite.count.mockResolvedValue(0)
   mockPrisma.invite.findFirst.mockResolvedValue(null)
   mockPrisma.invite.findMany.mockResolvedValue([])
+  mockPrisma.invite.update.mockResolvedValue({})
   mockPrisma.role.findFirst.mockResolvedValue({ id: 'role-1', name: 'Staff' })
   mockPrisma.role.create.mockResolvedValue({ id: 'role-1', name: 'Staff' })
   mockPrisma.tenantUsage.update.mockResolvedValue({})
+  mockPrisma.user.findFirst.mockResolvedValue(null)
+  mockPrisma.user.create.mockResolvedValue({
+    id: 'user-new',
+    tenantId: 'tenant-1',
+    email: 'staff@example.com'
+  })
 })
 
 describe('invite service', () => {
@@ -153,5 +163,86 @@ describe('invite service', () => {
     const result = await revokeInvite(env, authUser, 'invite-1')
     expect(result.success).toBe(true)
     expect(mockPrisma.tenantUsage.update).toHaveBeenCalled()
+  })
+
+  it('resends invite and rotates token', async () => {
+    const now = new Date()
+
+    mockPrisma.invite.findFirst.mockResolvedValueOnce({
+      id: 'invite-1',
+      tenantId: 'tenant-1',
+      email: 'staff@example.com',
+      status: 'PENDING',
+      role: { name: 'Staff' },
+      inviter: { id: 'user-owner', email: 'owner@example.com', firstName: 'Owner', lastName: 'User' },
+      expiresAt: now,
+      acceptedAt: null,
+      createdAt: now,
+      token: 'initial-token'
+    })
+
+    mockPrisma.invite.update.mockResolvedValueOnce({
+      id: 'invite-1',
+      tenantId: 'tenant-1',
+      email: 'staff@example.com',
+      status: 'PENDING',
+      role: { name: 'Staff' },
+      inviter: { id: 'user-owner', email: 'owner@example.com', firstName: 'Owner', lastName: 'User' },
+      expiresAt: new Date(now.getTime() + 60 * 60 * 1000),
+      acceptedAt: null,
+      createdAt: now,
+      token: 'new-token-id'
+    })
+
+    const invite = await resendInvite(env, authUser, 'invite-1')
+    expect(invite.token).toBeDefined()
+    expect(typeof invite.token).toBe('string')
+  })
+
+  it('accepts invite using signed token', async () => {
+    mockPrisma.invite.findFirst.mockResolvedValueOnce({
+      id: 'invite-1',
+      tenantId: 'tenant-1',
+      email: 'staff@example.com',
+      status: 'PENDING',
+      role: { id: 'role-1', name: 'Staff' },
+      roleId: 'role-1',
+      tenant: { id: 'tenant-1' },
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000)
+    })
+
+    mockPrisma.invite.update.mockResolvedValueOnce({
+      id: 'invite-1',
+      status: 'ACCEPTED'
+    })
+
+    const { token } = await createKvSignedToken(
+      env,
+      'invite',
+      { inviteId: 'invite-1', tenantId: 'tenant-1', email: 'staff@example.com' },
+      60
+    )
+
+    const result = await acceptInvite(env, {
+      token,
+      firstName: 'New',
+      lastName: 'Staff',
+      password: 'Complex1!'
+    })
+
+    expect(result).toMatchObject({
+      id: 'user-new',
+      tenantId: 'tenant-1',
+      email: 'staff@example.com'
+    })
+    expect(mockPrisma.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tenantId: 'tenant-1',
+          email: 'staff@example.com'
+        })
+      })
+    )
+    expect(tempStore.size).toBe(0)
   })
 })

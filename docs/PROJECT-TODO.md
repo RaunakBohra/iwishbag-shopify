@@ -19,9 +19,9 @@
 
 ## 3. Backend API Delivery (ref `docs/architecture/API-SPECIFICATIONS.md`)
 - [x] Auth & session lifecycle endpoints + KV session store, audit events, rate limits. *(Zod validators, password policy, audit + Better Stack/PostHog events, rate limits, TTL headers, password reset + 2FA complete — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §1.)*
-- [ ] Tenant & staff management endpoints with invite flow, plan limit enforcement. *(TODO: Implement remaining CRUD logic, enforce plan quotas, update docs/tests — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §2.)*
+- [x] Tenant & staff management endpoints with invite flow, plan limit enforcement. *(RBAC permissions, usage stats, plan-limit 429s, invite lifecycle tests — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §2.)*
 - [x] Catalog & inventory APIs, R2 media uploads, catalog-events worker.
-- [ ] Pricing/discount logic with advisory locks, usage tracking. *(TODO: Model pricing tables, add advisory lock helpers, emit usage metrics — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §3.)*
+- [x] Pricing/discount logic with advisory locks, usage tracking. *(Tiered discount rules, eligibility endpoint, advisory locks, and tests landed — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §3.)*
 - [ ] Cart/checkout/order pipeline (Durable Objects cart, payments gateway factory, order events). *(TODO: Scaffold cart Durable Object, integrate payment gateways, persist order events — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §4.)*
 - [ ] Fulfillment + logistics integrations (Pathao, Tootle, Nepal Post) with BYOK support. *(TODO: Draft integration clients, webhook handlers, config UI hooks — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §5.)*
 - [ ] Payment normalization, reconciliation endpoint, payout reporting. *(TODO: Define normalized payment schema, build reconciliation job + reporting API — see `docs/architecture/API-IMPLEMENTATION-CHECKLIST.md` §6.)*

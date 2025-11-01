@@ -22,6 +22,8 @@ import onboardingRoutes from './routes/onboarding'
 import checkoutRoutes from './routes/checkout'
 import storefrontCartRoutes from './routes/storefront-cart'
 import cartRoutes from './routes/cart'
+import discountRoutes from './routes/discounts'
+import publicDiscountRoutes from './routes/public-discounts'
 
 const app = new Hono<AppEnv>()
 
@@ -116,5 +118,7 @@ app.route('/v1/onboarding', onboardingRoutes)
 app.route('/v1/checkout', checkoutRoutes)
 app.route('/public/v1/storefront', storefrontCartRoutes)
 app.route('/v1/cart', cartRoutes)
+app.route('/v1/discounts', discountRoutes)
+app.route('/public/v1/discounts', publicDiscountRoutes)
 
 export default app

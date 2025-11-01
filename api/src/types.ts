@@ -33,5 +33,6 @@ export type AppEnv = {
   Bindings: EnvBindings
   Variables: {
     authUser?: AuthUser
+    authPermissions?: Set<string>
   }
 }
