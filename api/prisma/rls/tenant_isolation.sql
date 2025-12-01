@@ -110,6 +110,22 @@ WITH CHECK ("tenantId" = app.current_tenant());
 
 DO $$ BEGIN EXECUTE 'ALTER TABLE "TenantSubscription" FORCE ROW LEVEL SECURITY;'; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 DO $$ BEGIN EXECUTE 'ALTER TABLE "TenantUsage" FORCE ROW LEVEL SECURITY;'; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN EXECUTE 'ALTER TABLE "StaffMember" FORCE ROW LEVEL SECURITY;'; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
+-- Force RLS for all tenant-scoped tables so owner connections cannot bypass policies
+DO $$
+DECLARE
+  rec record;
+BEGIN
+  FOR rec IN (
+    SELECT table_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND column_name = 'tenantId'
+  ) LOOP
+    EXECUTE format('ALTER TABLE "%s" FORCE ROW LEVEL SECURITY;', rec.table_name);
+  END LOOP;
+END;
+$$;
 
 -- Plan usage enforcement (products + staff counts)
 CREATE OR REPLACE FUNCTION app.plan_limit_value(p_tenant text, p_field text)
