@@ -22,7 +22,12 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@iwishbag/shared": ["../shared/src/index.ts"],
+      "@iwishbag/shared/*": ["../shared/src/*"]
+    }
   },
   "include": [
     "next-env.d.ts",

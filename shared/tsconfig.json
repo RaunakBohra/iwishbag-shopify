@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "allowJs": false,
+    "strict": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "baseUrl": "./src"
+  },
+  "include": ["src/**/*"]
+}

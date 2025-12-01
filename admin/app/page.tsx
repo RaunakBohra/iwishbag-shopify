@@ -4,21 +4,18 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { capture, initPosthog } from '../lib/posthog'
 import { apiFetch } from '../lib/api'
-
-type Permission =
-  | 'dashboard.view'
-  | 'orders.view'
-  | 'catalog.manage'
-  | 'customers.view'
-  | 'marketing.view'
-  | 'analytics.view'
-  | 'settings.manage'
-
-interface OperatorProfile {
-  name: string
-  role: string
-  permissions: Permission[]
-}
+import type {
+  ActivityItem,
+  DashboardOverview,
+  FunnelSummary,
+  MetricFormat,
+  MetricSummary,
+  NotificationItem,
+  OnboardingCardState,
+  OnboardingStatus,
+  OperatorProfile,
+  Permission
+} from '@iwishbag/shared'
 
 interface NavigationItem {
   label: string
@@ -33,61 +30,6 @@ interface MetricCard {
   delta: string
   trend: 'up' | 'down' | 'flat'
   subLabel: string
-}
-
-interface NotificationItem {
-  id: string
-  title: string
-  detail: string
-  tone: 'warning' | 'info' | 'success'
-  href?: string
-}
-
-interface OnboardingResponse {
-  tenantId: string
-  currentStep: number
-  completed: boolean
-  steps: Record<string, unknown>
-}
-
-type OnboardingCardState =
-  | { status: 'loading'; message: string }
-  | { status: 'unavailable'; message: string }
-  | { status: 'complete'; message: string }
-  | { status: 'needs-action'; message: string; currentStep: number; totalSteps: number }
-
-type MetricFormat = 'currency' | 'number' | 'percent'
-
-interface MetricSummary {
-  id: string
-  label: string
-  value: number
-  change: number
-  format?: MetricFormat
-  helper?: string
-}
-
-interface FunnelSummary {
-  label: string
-  value: number
-  change: number
-  format?: MetricFormat
-}
-
-interface ActivityItem {
-  id: string
-  title: string
-  detail: string
-  tone: 'warning' | 'info' | 'success'
-  timestamp?: string
-}
-
-interface DashboardOverview {
-  metrics: MetricSummary[]
-  funnel: FunnelSummary[]
-  notifications: NotificationItem[]
-  activity: ActivityItem[]
-  generatedAt: string
 }
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '')
@@ -282,7 +224,7 @@ export default function DashboardPage() {
     message: 'Checking onboarding progress…'
   })
   const [onboardingNotifications, setOnboardingNotifications] = useState<NotificationItem[]>([])
-  const [onboardingDetail, setOnboardingDetail] = useState<OnboardingResponse | null>(null)
+  const [onboardingDetail, setOnboardingDetail] = useState<OnboardingStatus | null>(null)
   const [overview, setOverview] = useState<DashboardOverview | null>(null)
   const [overviewStatus, setOverviewStatus] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle')
   const [overviewMessage, setOverviewMessage] = useState<string | null>(null)
@@ -346,7 +288,7 @@ export default function DashboardPage() {
 
     const fetchStatus = async () => {
       try {
-        const data = await apiFetch<OnboardingResponse>(`${API_BASE}/v1/onboarding`, {
+        const data = await apiFetch<OnboardingStatus>(`${API_BASE}/v1/onboarding`, {
           headers: buildAuthHeaders(),
           credentials: 'include'
         })
