@@ -113,9 +113,12 @@
 - Add partial unique or constraint to guarantee a single `is_primary = true` per store.
 - Store DNS verification metadata (TXT token, status history).
 
-### `staff_members` *(missing)*
+### `staff_members`
 
-- Still evaluating dedicated table vs. deriving from users/role assignments; no Prisma model yet.
+- Dedicated join model between tenants and users storing staff metadata (`title`, `department`, `phone`, `status`, `permissions[]`, activity timestamps).
+- Tracks inviter via `invited_by` relation plus audit timestamps for onboarding flows.
+- Enforced uniqueness per tenant/user pair via `@@unique([tenant_id, user_id])`; RLS policies inherited from generic tenantId helper.
+- Backed by `StaffStatus` enum (`INVITED`, `ACTIVE`, `SUSPENDED`, `DISABLED`) to align API state machine.
 
 ### `permissions` / `roles` / `role_permissions` / `staff_roles`
 

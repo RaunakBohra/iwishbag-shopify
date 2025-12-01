@@ -20,6 +20,13 @@ enum UserRole {
   PLATFORM_ADMIN
 }
 
+enum StaffStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -730,36 +737,36 @@ model CustomerAddress {
 }
 
 model Cart {
-  id            String     @id @default(cuid())
-  tenantId      String
-  tenant        Tenant     @relation(fields: [tenantId], references: [id])
-  customerId    String?
-  customer      Customer?  @relation(fields: [customerId], references: [id])
-  status        CartStatus @default(ACTIVE)
-  currency      String     @default("NPR")
-  subtotal      Decimal    @default("0") @db.Decimal(10, 2)
-  total         Decimal    @default("0") @db.Decimal(10, 2)
-  discountTotal Decimal    @default("0") @db.Decimal(10, 2)
-  taxTotal      Decimal    @default("0") @db.Decimal(10, 2)
-  email         String?
-  phone         String?
-  locale        String?
-  shippingAddress Json?
-  billingAddress  Json?
-  shippingMethod  Json?
-  completedAt   DateTime?
-  abandonedAt   DateTime?
-  lastSeenAt    DateTime?
-  expiresAt     DateTime?
-  attributes    Json?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  items         CartItem[]
-  sessions      CartSession[]
-  discounts     CartDiscount[]
+  id               String           @id @default(cuid())
+  tenantId         String
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
+  customerId       String?
+  customer         Customer?        @relation(fields: [customerId], references: [id])
+  status           CartStatus       @default(ACTIVE)
+  currency         String           @default("NPR")
+  subtotal         Decimal          @default("0") @db.Decimal(10, 2)
+  total            Decimal          @default("0") @db.Decimal(10, 2)
+  discountTotal    Decimal          @default("0") @db.Decimal(10, 2)
+  taxTotal         Decimal          @default("0") @db.Decimal(10, 2)
+  email            String?
+  phone            String?
+  locale           String?
+  shippingAddress  Json?
+  billingAddress   Json?
+  shippingMethod   Json?
+  completedAt      DateTime?
+  abandonedAt      DateTime?
+  lastSeenAt       DateTime?
+  expiresAt        DateTime?
+  attributes       Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  items            CartItem[]
+  sessions         CartSession[]
+  discounts        CartDiscount[]
   checkoutLockedAt DateTime?
   checkoutSession  CheckoutSession? @relation("CartCheckoutSession")
-  order         Order?     @relation("CartOrder")
+  order            Order?           @relation("CartOrder")
 
   @@index([tenantId, status])
   @@index([tenantId, customerId])
@@ -767,39 +774,39 @@ model Cart {
 }
 
 model CartItem {
-  id         String          @id @default(cuid())
-  cartId     String
-  cart       Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product         @relation(fields: [productId], references: [id])
-  variantId  String?
-  variant    ProductVariant? @relation(fields: [variantId], references: [id])
-  type       CartItemType    @default(PRODUCT)
-  title      String?
-  sku        String?
-  quantity   Int             @default(1)
-  unitPrice  Decimal         @default("0") @db.Decimal(10, 2)
-  subtotal   Decimal         @default("0") @db.Decimal(10, 2)
-  discountTotal Decimal      @default("0") @db.Decimal(10, 2)
-  taxTotal   Decimal         @default("0") @db.Decimal(10, 2)
-  metadata   Json?
-  attributes Json?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  reservations InventoryReservation[]
+  id            String                 @id @default(cuid())
+  cartId        String
+  cart          Cart                   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product                @relation(fields: [productId], references: [id])
+  variantId     String?
+  variant       ProductVariant?        @relation(fields: [variantId], references: [id])
+  type          CartItemType           @default(PRODUCT)
+  title         String?
+  sku           String?
+  quantity      Int                    @default(1)
+  unitPrice     Decimal                @default("0") @db.Decimal(10, 2)
+  subtotal      Decimal                @default("0") @db.Decimal(10, 2)
+  discountTotal Decimal                @default("0") @db.Decimal(10, 2)
+  taxTotal      Decimal                @default("0") @db.Decimal(10, 2)
+  metadata      Json?
+  attributes    Json?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  reservations  InventoryReservation[]
 
   @@index([cartId])
 }
 
 model CartSession {
-  id           String             @id @default(cuid())
+  id           String            @id @default(cuid())
   tenantId     String
-  tenant       Tenant             @relation(fields: [tenantId], references: [id])
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
   cartId       String
-  cart         Cart               @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  token        String             @unique
-  status       CartSessionStatus  @default(ACTIVE)
-  clientSecret String?            @unique
+  cart         Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  token        String            @unique
+  status       CartSessionStatus @default(ACTIVE)
+  clientSecret String?           @unique
   locale       String?
   currency     String?
   email        String?
@@ -809,9 +816,9 @@ model CartSession {
   expiresAt    DateTime?
   abandonedAt  DateTime?
   completedAt  DateTime?
-  lastSeenAt   DateTime           @default(now())
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  lastSeenAt   DateTime          @default(now())
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@index([tenantId, status])
   @@index([cartId, status])
@@ -819,18 +826,18 @@ model CartSession {
 }
 
 model CartDiscount {
-  id         String             @id @default(cuid())
+  id         String              @id @default(cuid())
   tenantId   String
-  tenant     Tenant             @relation(fields: [tenantId], references: [id])
+  tenant     Tenant              @relation(fields: [tenantId], references: [id])
   cartId     String
-  cart       Cart               @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cart       Cart                @relation(fields: [cartId], references: [id], onDelete: Cascade)
   code       String
   type       DiscountType?
   allocation DiscountAllocation?
-  amount     Decimal?           @db.Decimal(10, 2)
+  amount     Decimal?            @db.Decimal(10, 2)
   metadata   Json?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 
   @@unique([cartId, code])
   @@index([cartId])
@@ -838,12 +845,12 @@ model CartDiscount {
 }
 
 model CheckoutSession {
-  id              String                @id @default(cuid())
+  id              String                 @id @default(cuid())
   tenantId        String
-  tenant          Tenant                @relation(fields: [tenantId], references: [id])
-  cartId          String                @unique
-  cart            Cart                  @relation("CartCheckoutSession", fields: [cartId], references: [id], onDelete: Cascade)
-  status          CheckoutSessionStatus @default(INITIATED)
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id])
+  cartId          String                 @unique
+  cart            Cart                   @relation("CartCheckoutSession", fields: [cartId], references: [id], onDelete: Cascade)
+  status          CheckoutSessionStatus  @default(INITIATED)
   currency        String
   locale          String?
   email           String?
@@ -851,43 +858,43 @@ model CheckoutSession {
   billingAddress  Json?
   shippingAddress Json?
   shippingMethod  Json?
-  subtotal        Decimal               @default("0") @db.Decimal(10, 2)
-  discountTotal   Decimal               @default("0") @db.Decimal(10, 2)
-  taxTotal        Decimal               @default("0") @db.Decimal(10, 2)
-  shippingTotal   Decimal               @default("0") @db.Decimal(10, 2)
-  total           Decimal               @default("0") @db.Decimal(10, 2)
+  subtotal        Decimal                @default("0") @db.Decimal(10, 2)
+  discountTotal   Decimal                @default("0") @db.Decimal(10, 2)
+  taxTotal        Decimal                @default("0") @db.Decimal(10, 2)
+  shippingTotal   Decimal                @default("0") @db.Decimal(10, 2)
+  total           Decimal                @default("0") @db.Decimal(10, 2)
   paymentMethod   String?
   metadata        Json?
   expiresAt       DateTime?
   confirmedAt     DateTime?
   submittedAt     DateTime?
   failedAt        DateTime?
-  orderId         String? @unique
-  order           Order?                @relation("OrderCheckoutSession", fields: [orderId], references: [id])
+  orderId         String?                @unique
+  order           Order?                 @relation("OrderCheckoutSession", fields: [orderId], references: [id])
   reservations    InventoryReservation[]
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   @@index([tenantId, status])
   @@index([tenantId, updatedAt])
 }
 
 model InventoryReservation {
-  id                String           @id @default(cuid())
+  id                String          @id @default(cuid())
   tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
   checkoutSessionId String
-  checkoutSession   CheckoutSession  @relation(fields: [checkoutSessionId], references: [id], onDelete: Cascade)
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Cascade)
   cartItemId        String
-  cartItem          CartItem         @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  cartItem          CartItem        @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
   productId         String
-  product           Product          @relation(fields: [productId], references: [id])
+  product           Product         @relation(fields: [productId], references: [id])
   variantId         String?
-  variant           ProductVariant?  @relation(fields: [variantId], references: [id])
+  variant           ProductVariant? @relation(fields: [variantId], references: [id])
   quantity          Int
   expiresAt         DateTime?
   releasedAt        DateTime?
-  createdAt         DateTime         @default(now())
+  createdAt         DateTime        @default(now())
 
   @@index([tenantId])
   @@index([checkoutSessionId])
@@ -1293,6 +1300,7 @@ model Tenant {
   inventory                ProductInventory[]
   inventoryAdjustments     InventoryAdjustment[]
   users                    User[]
+  staffMembers             StaffMember[]
   roles                    Role[]
   menus                    Menu[]
   pages                    Page[]
@@ -1345,32 +1353,57 @@ model Tenant {
 }
 
 model User {
-  id              String               @id @default(cuid())
-  tenantId        String?
-  tenant          Tenant?              @relation(fields: [tenantId], references: [id])
-  email           String               @unique
-  passwordHash    String
-  firstName       String
-  lastName        String
-  role            UserRole
-  avatarUrl       String?
-  locale          String?              @default("en")
-  lastLoginAt     DateTime?
-  lastLoginIp     String?
-  invite          Invite?              @relation("invitee")
-  inviteId        String?              @unique
-  invitedUsers    Invite[]             @relation("inviter")
-  roleAssignments UserRoleAssignment[]
-  auditLogs       AuditLog[]
-  passwordResetTokens PasswordResetToken[]
-  loginAttempts   LoginAttempt[]
-  twoFactorEnabled Boolean             @default(false)
-  twoFactorSecret  String?
-  twoFactorConfirmedAt DateTime?
-  twoFactorRecoveryCodes String[]      @default([])
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  deletedAt       DateTime?
+  id                     String               @id @default(cuid())
+  tenantId               String?
+  tenant                 Tenant?              @relation(fields: [tenantId], references: [id])
+  email                  String               @unique
+  passwordHash           String
+  firstName              String
+  lastName               String
+  role                   UserRole
+  avatarUrl              String?
+  locale                 String?              @default("en")
+  lastLoginAt            DateTime?
+  lastLoginIp            String?
+  invite                 Invite?              @relation("invitee")
+  inviteId               String?              @unique
+  invitedUsers           Invite[]             @relation("inviter")
+  roleAssignments        UserRoleAssignment[]
+  auditLogs              AuditLog[]
+  passwordResetTokens    PasswordResetToken[]
+  loginAttempts          LoginAttempt[]
+  twoFactorEnabled       Boolean              @default(false)
+  twoFactorSecret        String?
+  twoFactorConfirmedAt   DateTime?
+  twoFactorRecoveryCodes String[]             @default([])
+  staffMemberships       StaffMember[]        @relation("StaffMemberUser")
+  staffInvitations       StaffMember[]        @relation("StaffMemberInviter")
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  deletedAt              DateTime?
+}
+
+model StaffMember {
+  id           String      @id @default(cuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User        @relation("StaffMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedById  String?
+  invitedBy    User?       @relation("StaffMemberInviter", fields: [invitedById], references: [id])
+  title        String?
+  department   String?
+  phone        String?
+  status       StaffStatus @default(INVITED)
+  permissions  String[]    @default([])
+  metadata     Json?
+  invitedAt    DateTime    @default(now())
+  lastActiveAt DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, status])
 }
 
 model Role {
@@ -1436,50 +1469,50 @@ model Invite {
 }
 
 model Product {
-  id                   String                        @id @default(cuid())
-  tenantId             String
-  tenant               Tenant                        @relation(fields: [tenantId], references: [id])
-  title                String
-  description          String?
-  sku                  String?
-  price                Decimal                       @db.Decimal(10, 2)
-  inventory            Int                           @default(0)
-  status               ProductStatus                 @default(DRAFT)
-  variants             ProductVariant[]
-  images               ProductImage[]
-  options              ProductOption[]
-  tags                 ProductTagging[]
-  collections          ProductCollectionAssignment[]
-  inventoryEntries     ProductInventory[]
-  inventoryAdjustments InventoryAdjustment[]
-  cartItems            CartItem[]
-  orderItems           OrderItem[]
+  id                    String                        @id @default(cuid())
+  tenantId              String
+  tenant                Tenant                        @relation(fields: [tenantId], references: [id])
+  title                 String
+  description           String?
+  sku                   String?
+  price                 Decimal                       @db.Decimal(10, 2)
+  inventory             Int                           @default(0)
+  status                ProductStatus                 @default(DRAFT)
+  variants              ProductVariant[]
+  images                ProductImage[]
+  options               ProductOption[]
+  tags                  ProductTagging[]
+  collections           ProductCollectionAssignment[]
+  inventoryEntries      ProductInventory[]
+  inventoryAdjustments  InventoryAdjustment[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
   inventoryReservations InventoryReservation[]
-  lowStockThreshold    Int?                          @default(5)
-  lastLowStockAlertAt  DateTime?
-  createdAt            DateTime                      @default(now())
-  updatedAt            DateTime                      @updatedAt
-  deletedAt            DateTime?
+  lowStockThreshold     Int?                          @default(5)
+  lastLowStockAlertAt   DateTime?
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  deletedAt             DateTime?
 
   @@index([tenantId])
 }
 
 model ProductVariant {
-  id                   String                @id @default(cuid())
-  productId            String
-  product              Product               @relation(fields: [productId], references: [id])
-  name                 String
-  sku                  String?
-  price                Decimal?              @db.Decimal(10, 2)
-  inventory            Int                   @default(0)
-  optionValues         ProductOptionValue[]
-  inventoryEntries     ProductInventory[]
-  inventoryAdjustments InventoryAdjustment[]
-  cartItems            CartItem[]
-  orderItems           OrderItem[]
+  id                    String                 @id @default(cuid())
+  productId             String
+  product               Product                @relation(fields: [productId], references: [id])
+  name                  String
+  sku                   String?
+  price                 Decimal?               @db.Decimal(10, 2)
+  inventory             Int                    @default(0)
+  optionValues          ProductOptionValue[]
+  inventoryEntries      ProductInventory[]
+  inventoryAdjustments  InventoryAdjustment[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
   inventoryReservations InventoryReservation[]
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
   @@index([productId])
 }
@@ -1625,38 +1658,38 @@ model TenantSubscription {
 }
 
 model TenantUsage {
-  id          String    @id @default(cuid())
-  tenantId    String    @unique
-  tenant      Tenant    @relation(fields: [tenantId], references: [id])
-  products    Int       @default(0)
-  variants    Int       @default(0)
-  images      Int       @default(0)
-  staff       Int       @default(0)
-  orders      Int       @default(0)
-  inventoryAdjustments Int @default(0)
-  lastResetAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  tenantId             String    @unique
+  tenant               Tenant    @relation(fields: [tenantId], references: [id])
+  products             Int       @default(0)
+  variants             Int       @default(0)
+  images               Int       @default(0)
+  staff                Int       @default(0)
+  orders               Int       @default(0)
+  inventoryAdjustments Int       @default(0)
+  lastResetAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model TenantProvisioningRun {
-  id          String              @id @default(cuid())
-  tenantId    String              @unique
-  tenant      Tenant              @relation(fields: [tenantId], references: [id])
-  status      ProvisioningStatus  @default(PENDING)
+  id          String             @id @default(cuid())
+  tenantId    String             @unique
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  status      ProvisioningStatus @default(PENDING)
   tasks       Json?
-  attempts    Int                 @default(0)
+  attempts    Int                @default(0)
   lastError   String?
-  startedAt   DateTime            @default(now())
+  startedAt   DateTime           @default(now())
   completedAt DateTime?
-  updatedAt   DateTime            @updatedAt
+  updatedAt   DateTime           @updatedAt
 }
 
 model TenantOnboarding {
-  tenantId    String  @id
-  tenant      Tenant  @relation(fields: [tenantId], references: [id])
-  currentStep Int     @default(1)
-  completed   Boolean @default(false)
+  tenantId    String   @id
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  currentStep Int      @default(1)
+  completed   Boolean  @default(false)
   steps       Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1674,15 +1707,15 @@ model AuditLog {
 }
 
 model PasswordResetToken {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash   String   @unique
-  expiresAt   DateTime
-  usedAt      DateTime?
-  createdAt   DateTime @default(now())
-  createdIp   String?
-  userAgent   String?
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  createdIp String?
+  userAgent String?
 
   @@index([userId])
   @@index([expiresAt])
