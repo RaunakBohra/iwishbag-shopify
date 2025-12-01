@@ -111,6 +111,63 @@ WITH CHECK ("tenantId" = app.current_tenant());
 DO $$ BEGIN EXECUTE 'ALTER TABLE "TenantSubscription" FORCE ROW LEVEL SECURITY;'; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 DO $$ BEGIN EXECUTE 'ALTER TABLE "TenantUsage" FORCE ROW LEVEL SECURITY;'; EXCEPTION WHEN undefined_table THEN NULL; END $$;
 
+-- Plan usage enforcement (products + staff counts)
+CREATE OR REPLACE FUNCTION app.plan_limit_value(p_tenant text, p_field text)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  limit_value integer;
+BEGIN
+  SELECT
+    CASE p_field
+      WHEN 'products' THEN COALESCE(t."maxProducts", sp."maxProducts")
+      WHEN 'staff' THEN COALESCE(t."maxStaff", sp."maxStaff")
+      WHEN 'orders' THEN COALESCE(t."maxOrdersPerMonth", sp."maxOrdersPerMonth")
+      ELSE NULL
+    END
+  INTO limit_value
+  FROM "Tenant" t
+  LEFT JOIN "SubscriptionPlan" sp ON sp."id" = t."planId"
+  WHERE t."id" = p_tenant;
+
+  IF limit_value IS NULL OR limit_value < 0 THEN
+    RETURN NULL;
+  END IF;
+
+  RETURN limit_value;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION app.enforce_tenant_usage_limits()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  product_limit integer;
+  staff_limit integer;
+BEGIN
+  product_limit := app.plan_limit_value(NEW."tenantId", 'products');
+  IF product_limit IS NOT NULL AND NEW."products" > product_limit THEN
+    RAISE EXCEPTION 'Plan limit exceeded for products (limit %, attempted %)', product_limit, NEW."products"
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  staff_limit := app.plan_limit_value(NEW."tenantId", 'staff');
+  IF staff_limit IS NOT NULL AND NEW."staff" > staff_limit THEN
+    RAISE EXCEPTION 'Plan limit exceeded for staff (limit %, attempted %)', staff_limit, NEW."staff"
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tenant_usage_plan_limits ON "TenantUsage";
+CREATE TRIGGER tenant_usage_plan_limits
+  BEFORE INSERT OR UPDATE ON "TenantUsage"
+  FOR EACH ROW EXECUTE FUNCTION app.enforce_tenant_usage_limits();
+
 -- Verify helper (optional)
 COMMENT ON FUNCTION app.set_tenant(text) IS 'Set current tenant context for RLS policies.';
 COMMENT ON FUNCTION app.clear_tenant() IS 'Clear tenant context.';

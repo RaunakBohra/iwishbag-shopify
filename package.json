@@ -21,7 +21,11 @@
     "prisma:generate": "npm run --workspace api prisma:generate",
     "prisma:studio": "npm run --workspace api prisma:studio",
     "lint": "npm run --workspace admin lint && npm run --workspace api lint",
-    "type-check": "npm run --workspace admin type-check && npm run --workspace api type-check"
+    "type-check": "npm run --workspace admin type-check && npm run --workspace api type-check",
+    "seed": "npm run --workspace api seed",
+    "seed:dev": "npm run --workspace api seed:dev",
+    "seed:staging": "npm run --workspace api seed:staging",
+    "seed:prod": "npm run --workspace api seed:prod"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

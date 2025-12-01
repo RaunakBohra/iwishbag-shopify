@@ -69,6 +69,9 @@ cp .env.example .env
 # Run database migrations
 pnpm prisma:migrate
 
+# Seed subscription plans + base data
+pnpm seed:dev
+
 # Start development servers
 pnpm dev        # Starts both frontend & API
 ```

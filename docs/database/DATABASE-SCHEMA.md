@@ -34,7 +34,7 @@
 
 **Gaps vs blueprint**
 - Contact & compliance metadata captured (`email`, `phone`, `business_name`, `PAN`, `VAT`, KYC timestamps).
-- Plan limits exist as nullable columns; still need enforcement logic + migration path from `PlanTier` enum to `subscription_plans`.
+- Plan limits now enforced at the database layer via `app.enforce_tenant_usage_limits` trigger; migration away from `PlanTier` enum to `subscription_plans` still pending.
 - JSON `settings` encapsulated via `tenant_settings` relation; evaluate schema validation + auditing.
 - Soft delete column (`deleted_at`) present; add default scope in Prisma client/helpers.
 - RLS policy pending (see Section 2).
@@ -55,6 +55,9 @@
 **Follow-ups**
 - Seed default Free/Pro/Max plans and map existing tenant enum usage.
 - Evaluate migrating away from enum `PlanTier` once foreign key in use.
+
+**Implementation**
+- `pnpm seed:dev` (or environment-specific variant) upserts the default plans via `api/prisma/seeds/plans.js`, so every environment stays in sync with pricing tiers.
 
 ---
 
