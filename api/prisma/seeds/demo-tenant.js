@@ -56,22 +56,24 @@ async function ensureDemoCatalog(prisma, tenantId) {
     }
   })
 
-  await prisma.productInventory.upsert({
-    where: {
-      productId_variantId: {
-        productId: existingProduct.id,
-        variantId: null
-      }
-    },
-    update: {
-      available: DEMO_STOCK
-    },
-    create: {
-      tenantId,
-      productId: existingProduct.id,
-      available: DEMO_STOCK
-    }
+  const existingInventory = await prisma.productInventory.findFirst({
+    where: { productId: existingProduct.id, variantId: null }
   })
+
+  if (existingInventory) {
+    await prisma.productInventory.update({
+      where: { id: existingInventory.id },
+      data: { available: DEMO_STOCK }
+    })
+  } else {
+    await prisma.productInventory.create({
+      data: {
+        tenantId,
+        productId: existingProduct.id,
+        available: DEMO_STOCK
+      }
+    })
+  }
 
   return { refreshedProductId: existingProduct.id, ensuredInventory: DEMO_STOCK }
 }
