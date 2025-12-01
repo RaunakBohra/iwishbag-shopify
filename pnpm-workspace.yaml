@@ -1,0 +1,7 @@
+packages:
+  - "frontend"
+  - "admin"
+  - "api"
+  - "shared"
+  - "workers/catalog-events"
+  - "workers/inventory-alerts"
